@@ -318,36 +318,36 @@ The frontend invokes these typed Tauri commands:
 ## 5. v0.1.0 Implementation Checklist
 
 ### Phase A: Core Models & Type Contracts
-- [ ] Define Rust models in `src-tauri/src/models/`:
+- [x] Define Rust models in `src-tauri/src/models/`:
   - `service.rs`: `ServiceCategory`, `ServiceStatus`
   - `instance.rs`: `ServiceInstance`
   - `project.rs`: `ProjectSite`
   - `discovery.rs`: `DiscoveredRuntime`
   - `ipc.rs`: `LogEntry`, `IpcStreamEvent`
-- [ ] Define mirrored TypeScript types in `src/types/`.
+- [x] Define mirrored TypeScript types in `src/types/`.
 
 ### Phase B: Rust Dynamic Supervisor & Drivers
-- [ ] Implement filesystem scanner in `src-tauri/src/discovery/` for `runtime/bin/<category>/<engine>/<version>/`.
-- [ ] Implement the `ServiceDriver` trait in `src-tauri/src/drivers/`.
-- [ ] Implement drivers:
+- [x] Implement filesystem scanner in `src-tauri/src/discovery/` for `runtime/bin/<category>/<engine>/<version>/`.
+- [x] Implement the `ServiceDriver` trait in `src-tauri/src/drivers/`.
+- [x] Implement drivers:
   - `NginxDriver`: Generates `nginx.conf` and upstreams; monitors port 80/443.
   - `PhpCgiDriver`: Generates `php.ini`; spawns `php-cgi` workers on port/socket.
   - `MariaDbDriver`: Runs initialization (`--initialize-insecure`), generates `my.cnf`, monitors port 3306.
-- [ ] Implement `Supervisor` in `src-tauri/src/supervisor/`:
+- [x] Implement `Supervisor` in `src-tauri/src/supervisor/`:
   - Process group isolation & Linux `prctl(PR_SET_PDEATHSIG, SIGTERM)`.
   - Windows Win32 Job Object binding with `KILL_ON_JOB_CLOSE`.
   - 16ms micro-batcher dispatching `IpcStreamEvent` over `tauri::ipc::Channel`.
 
 ### Phase C: `rakit` CLI Entrypoint
-- [ ] Create `src-tauri/src/bin/rakit.rs` CLI using `clap` v4.
-- [ ] Implement CLI subcommands:
+- [x] Create `src-tauri/src/bin/rakit.rs` CLI using `clap` v4.
+- [x] Implement CLI subcommands:
   - `rakit up` (boots rack or project stack).
   - `rakit down` (halts running stack).
   - `rakit status` (renders real-time ASCII table or JSON).
 
 ### Phase D: SolidJS Dynamic Rack UI & Live Log Channel
-- [ ] Connect `subscribe_supervisor` in `src/` on mount via Tauri v2 `Channel`.
-- [ ] Implement `RackDashboard.tsx`: Displays interactive cards for active services (PID, CPU%, RAM, Ports).
-- [ ] Implement `LogViewer.tsx`: Bounded virtualized log view receiving `LogBatch` events without UI freezing.
-- [ ] Validate "Hello Laravel" end-to-end execution (Nginx routing to PHP 8.3 + MariaDB).
+- [x] Connect `subscribe_supervisor` in `src/` on mount via Tauri v2 `Channel`.
+- [x] Implement `RackDashboard.tsx`: Displays interactive cards for active services (PID, CPU%, RAM, Ports).
+- [x] Implement `LogViewer.tsx`: Bounded virtualized log view receiving `LogBatch` events without UI freezing.
+- [x] Validate "Hello Laravel" end-to-end execution (Nginx routing to PHP 8.3 + MariaDB).
 
