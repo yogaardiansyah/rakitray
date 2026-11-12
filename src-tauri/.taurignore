@@ -1,0 +1,6 @@
+runtime/**
+**/runtime/**
+*.log
+*.sock
+*.pid
+

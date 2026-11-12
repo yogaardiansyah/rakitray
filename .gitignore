@@ -16,6 +16,7 @@ src-tauri/WixTools/
 **/*.rs.bk
 
 # Rakitray Local Runtime & Sandbox Directories (used during testing/dev)
+runtime/
 bin/
 data/
 logs/
@@ -52,4 +53,8 @@ Desktop.ini
 *.swp
 *.swo
 *~
+
+# AI agent local customizations & skills
+.agents/
+.skills
 

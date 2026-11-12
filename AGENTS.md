@@ -88,3 +88,12 @@ As an AI agent, you are **strictly prohibited** from:
 2. Removing or hiding the mandatory Section 7(b) / Section 5(d) attribution notices (`"Powered by Rakitray — Created by Yoga ardiansyah"` and the link to `https://github.com/yogaardiansyah/rakitray`) from the application UI (About dialog, footer, system tray menu) or CLI output (`--version` / `--help`).
 3. Introducing proprietary or AGPLv3-incompatible dependencies into the core repository.
 
+---
+
+## 6. Always-On Assistant Modes (Caveman, Ponytail, RTK)
+
+For this workspace, the following operational modes are permanently active:
+- **Caveman Mode (Always-On):** Respond terse like smart caveman. Answer first. Zero conversational ceremony, greetings, hedging, or fluff. All technical substance, code, file paths, commands, and numbers stay 100% exact.
+- **Ponytail Mode (Always-On):** Lazy senior dev philosophy. Smallest complete change that solves whole task. No premature abstraction, no bloat, standard library/existing helpers first, no unrequested features.
+- **RTK Optimization (Always-On):** Output token efficiency and tool execution optimizations via RTK.
+

@@ -1,4 +1,5 @@
 [package]
+default-run = "rakitray"
 name = "rakitray"
 version = "0.1.0"
 description = "Ultra-fast, lightweight, modular Local Development Environment Launcher"
@@ -20,6 +21,24 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
 tokio = { version = "1", features = ["full"] }
+sysinfo = "0.33"
+toml = "0.8"
+async-trait = "0.1"
+clap = { version = "4", features = ["derive"] }
+
+[[bin]]
+name = "rakit"
+path = "src/bin/rakit.rs"
+
+[[bin]]
+name = "rakitray"
+path = "src/main.rs"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = ["Win32_System_JobObjects", "Win32_Foundation", "Win32_Security"] }
 
 [features]
 default = ["custom-protocol"]

@@ -13,8 +13,11 @@
     "windows": [
       {
         "title": "Rakitray",
-        "width": 900,
-        "height": 650,
+        "width": 1200,
+        "height": 780,
+        "minWidth": 960,
+        "minHeight": 640,
+        "center": true,
         "resizable": true,
         "fullscreen": false
       }
