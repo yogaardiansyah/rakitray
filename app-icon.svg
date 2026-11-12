@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+    <linearGradient id="rocket" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+    <linearGradient id="flame" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Rounded App Icon Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect width="504" height="504" x="4" y="4" rx="108" fill="none" stroke="#38bdf8" stroke-width="4" stroke-opacity="0.3"/>
+
+  <!-- Tray Rack Base Platform -->
+  <g transform="translate(0, 40)">
+    <rect x="96" y="320" width="320" height="24" rx="12" fill="#334155"/>
+    <rect x="136" y="356" width="240" height="16" rx="8" fill="#1e293b"/>
+    <circle cx="120" cy="332" r="6" fill="#38bdf8"/>
+    <circle cx="144" cy="332" r="6" fill="#10b981"/>
+    <circle cx="168" cy="332" r="6" fill="#f59e0b"/>
+
+    <!-- Upward Speed & Modular Beams -->
+    <path d="M256 100 L320 250 L280 250 L280 300 L232 300 L232 250 L192 250 Z" fill="url(#rocket)" filter="url(#glow)"/>
+    
+    <!-- Thruster Core -->
+    <path d="M240 300 L272 300 L256 340 Z" fill="url(#flame)"/>
+
+    <!-- Stylized Modern 'R' Monogram -->
+    <path d="M236 160 L266 160 C280 160 290 170 290 182 C290 194 280 204 266 204 L236 204 Z" fill="#ffffff" fill-opacity="0.95"/>
+    <path d="M220 144 L268 144 C290 144 306 160 306 182 C306 200 294 214 278 219 L308 266 L288 266 L262 224 L238 224 L238 266 L220 266 Z" fill="#ffffff"/>
+  </g>
+</svg>
+
