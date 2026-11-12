@@ -1,0 +1,55 @@
+# ==============================================================================
+# Rakitray — Git Ignore Configuration
+# ==============================================================================
+
+# Frontend dependencies & build artifacts (Bun / Vite / SolidJS)
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# Tauri & Rust compilation artifacts
+src-tauri/target/
+src-tauri/gen/schemas/
+src-tauri/WixTools/
+**/*.rs.bk
+
+# Rakitray Local Runtime & Sandbox Directories (used during testing/dev)
+bin/
+data/
+logs/
+tmp/
+*.log
+*.pid
+*.sock
+*.lock.pid
+
+# Downloaded archives & temporary extraction staging
+*.zip
+*.tar.gz
+*.tar.xz
+*.7z
+*.msi
+*.exe
+*.dmg
+*.AppImage
+*.deb
+
+# Environment variables & local secrets
+.env
+.env.*
+!.env.example
+
+# OS & Editor metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+

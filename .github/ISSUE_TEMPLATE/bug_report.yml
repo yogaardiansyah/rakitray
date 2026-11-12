@@ -1,0 +1,106 @@
+name: "Bug Report"
+description: "Report a bug, crash, port conflict issue, or service supervision problem in Rakitray."
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve **Rakitray**! Please fill out the details below so we can reproduce and resolve the issue quickly.
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: "Operating System"
+      description: "Which OS are you running Rakitray on?"
+      options:
+        - "Windows 11"
+        - "Windows 10"
+        - "Ubuntu / Debian Linux"
+        - "Fedora / RHEL / Arch Linux"
+        - "macOS (Apple Silicon M1/M2/M3/M4)"
+        - "macOS (Intel x86_64)"
+        - "Other Linux Distribution"
+    validations:
+      required: true
+
+  - type: input
+    id: os_version
+    attributes:
+      label: "OS Version & Architecture"
+      description: "Exact OS build/kernel version and CPU architecture."
+      placeholder: "e.g., Windows 11 23H2 (x86_64) or Ubuntu 24.04 LTS (x86_64)"
+    validations:
+      required: true
+
+  - type: input
+    id: app_version
+    attributes:
+      label: "Rakitray Version"
+      description: "What version or commit of Rakitray are you running?"
+      placeholder: "e.g., v0.1.0 or commit sha"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected_module
+    attributes:
+      label: "Affected Module / Service"
+      description: "Which runtime module or Rakitray subsystem is experiencing the bug?"
+      multiple: true
+      options:
+        - "Core Process Supervisor (Win32 Job Objects / Unix PGID)"
+        - "Binary Downloader / Lean Archive Extractor"
+        - "Smart Port Doctor / Hosts File Manager"
+        - "Per-Project Isolation (.dev.toml)"
+        - "Zero-RAM System Tray Mode"
+        - "UI / Log Viewer (SolidJS / IPC Channel)"
+        - "Nginx"
+        - "Caddy"
+        - "PHP (8.1 / 8.2 / 8.3 / 8.4)"
+        - "MariaDB / MySQL"
+        - "PostgreSQL"
+        - "Redis / Valkey"
+        - "Node.js / Bun"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: "Steps to Reproduce"
+      description: "Provide an exact, step-by-step sequence to trigger the bug."
+      placeholder: |
+        1. Open Rakitray and install MariaDB 11.4.4 + PHP 8.3
+        2. Load a project containing `.dev.toml`
+        3. Click "Start All Services"
+        4. Observe error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: "Expected Behavior"
+      description: "What did you expect to happen?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: "Actual Behavior"
+      description: "What actually happened? Did any zombie processes remain after stopping?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Service & Launcher Logs"
+      description: "Paste relevant output from Rakitray's log stream or `logs/<service>.log`."
+      render: shell
+    validations:
+      required: false
+

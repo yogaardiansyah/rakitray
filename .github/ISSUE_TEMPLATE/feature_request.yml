@@ -1,0 +1,64 @@
+name: "Feature Request"
+description: "Propose a new launcher capability, UI improvement, or performance optimization for Rakitray."
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea to make **Rakitray** faster, leaner, or more productive?
+        *(Note: If you want to request a new downloadable runtime/binary such as FrankenPHP, Mailpit, or Meilisearch, please use the **Module Request** template instead.)*
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: "Feature Area"
+      description: "Which subsystem of Rakitray does this proposal relate to?"
+      options:
+        - "Process Supervisor & Lifecycle (Rust)"
+        - "Binary Downloader & Lean Extractor (Rust)"
+        - "Per-Project Isolation (.dev.toml & Config Engine)"
+        - "Smart Port Doctor & Network / TLS / Hosts"
+        - "Zero-RAM System Tray & Window Lifecycle"
+        - "High-Frequency Telemetry & Log Streaming (IPC)"
+        - "Frontend UI / UX (SolidJS)"
+        - "CLI Interface"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem_statement
+    attributes:
+      label: "Problem Statement / Motivation"
+      description: "What workflow friction or limitation in existing tools (XAMPP, Laragon, FlyEnv) does this solve?"
+      placeholder: "When working on multiple microservices simultaneously, I need..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: "Proposed Solution"
+      description: "Describe how this feature should work from both the user perspective and the technical architecture perspective."
+    validations:
+      required: true
+
+  - type: textarea
+    id: performance_impact
+    attributes:
+      label: "Memory, Disk & Architectural Impact"
+      description: "How does this align with Rakitray's zero-bloat philosophy (Rust systems logic in `src-tauri/`, pure reactive UI in `src/`)?"
+      placeholder: "All socket checks run asynchronously in Rust; zero background polling in SolidJS."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: "Pre-Submission Checklist"
+      options:
+        - label: "I have searched existing issues to make sure this feature has not already been requested."
+          required: true
+        - label: "This proposal respects Rakitray's strict Rust (`src-tauri/`) vs. SolidJS (`src/`) architectural boundary."
+          required: true
+

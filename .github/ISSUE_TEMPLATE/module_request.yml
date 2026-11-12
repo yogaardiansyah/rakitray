@@ -1,0 +1,75 @@
+name: "Module Request (Install-as-You-Need Catalog)"
+description: "Request a new downloadable portable runtime, database, web server, or tool for Rakitray's catalog."
+title: "[Module]: "
+labels: ["module-request", "catalog"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form to propose adding a new portable runtime or service to **Rakitray's "Install-as-You-Need" Catalog**.
+        Every module in Rakitray must provide **official portable archives** (`.zip`, `.tar.gz`, `.tar.xz`) that can run isolated inside Rakitray's `bin/` directory without requiring global OS installers.
+
+  - type: input
+    id: module_name
+    attributes:
+      label: "Module Name & Version(s)"
+      description: "Name of the runtime/service and recommended initial version(s)."
+      placeholder: "e.g., FrankenPHP 1.3.x, PostgreSQL 17.x, Valkey 8.0, Mailpit 1.21"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: "Module Category"
+      description: "Select the primary category for this module."
+      options:
+        - "Web Server"
+        - "Runtime"
+        - "Database"
+        - "Cache"
+        - "Tool"
+    validations:
+      required: true
+
+  - type: textarea
+    id: binary_urls
+    attributes:
+      label: "Official Portable Binary URLs (.zip / .tar.gz / .tar.xz)"
+      description: "Provide direct links to official upstream portable releases (and SHA-256 checksums if available)."
+      placeholder: |
+        - Windows x86_64: https://example.org/releases/tool-1.0.0-win-x64.zip
+        - Linux x86_64: https://example.org/releases/tool-1.0.0-linux-amd64.tar.gz
+        - macOS arm64: https://example.org/releases/tool-1.0.0-darwin-arm64.tar.gz
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: supported_os
+    attributes:
+      label: "Supported Operating Systems"
+      description: "Which platforms offer official portable builds for this module?"
+      options:
+        - label: "Windows (x86_64)"
+        - label: "Linux (x86_64 / aarch64)"
+        - label: "macOS (Apple Silicon arm64)"
+        - label: "macOS (Intel x86_64)"
+
+  - type: input
+    id: default_port_and_cli
+    attributes:
+      label: "Default Port & CLI Start Command"
+      description: "What default port does this module bind to, and what CLI command/flags start it in foreground/supervised mode?"
+      placeholder: "e.g., Port 6379 | Command: redis-server {{CONFIG_PATH}} --port {{PORT}} --dir {{DATA_DIR}}"
+    validations:
+      required: true
+
+  - type: textarea
+    id: strip_patterns
+    attributes:
+      label: "Archive Bloat to Strip on Extraction (Optional)"
+      description: "List any known non-essential files in the upstream archive (e.g., `.pdb` symbols, test suites, docs) that Rakitray's Lean Extractor should strip."
+      placeholder: "**/*.pdb, **/test/**, **/doc/**"
+    validations:
+      required: false
+

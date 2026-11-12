@@ -5,6 +5,19 @@
  Everyone is permitted to copy and distribute verbatim copies
  of this license document, but changing it is not allowed.
 
+=======================================================================
+ Rakitray — Local Development Environment Launcher
+ Copyright (C) 2026 Yoga ardiansyah (@yogaardiansyah)
+ Repository: https://github.com/yogaardiansyah/rakitray
+
+ Additional Section 7(b) & Section 5(d) Attribution Notice:
+ Pursuant to Section 7(b) and Section 5(d) of the GNU Affero General
+ Public License v3.0, all copies, forks, modified versions, binary
+ distributions, and network deployments of this Program MUST retain the
+ accompanying NOTICE file and preserve all author attribution notices,
+ origin repository links, and interactive UI/CLI attribution displays.
+=======================================================================
+
                             Preamble
 
   The GNU Affero General Public License is a free, copyleft license for
@@ -629,13 +642,15 @@ to attach them to the start of each source file to most effectively
 state the exclusion of warranty; and each file should have at least
 the "copyright" line and a pointer to where the full notice is found.
 
-    <one line to give the program's name and a brief idea of what it does.>
-    Copyright (C) <year>  <name of author>
+    Rakitray — Ultra-fast, lightweight, modular Local Development Environment Launcher
+    Copyright (C) 2026  Yoga ardiansyah (@yogaardiansyah) <https://github.com/yogaardiansyah/rakitray>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published
-    by the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    by the Free Software Foundation, version 3 of the License only
+    (AGPL-3.0-only), subject to the mandatory attribution and legal notice
+    preservation terms in the accompanying NOTICE file pursuant to
+    Section 7(b) and Section 5(d).
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of

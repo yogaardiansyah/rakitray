@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality-and-build-check:
+    name: "Check & Test (${{ matrix.os }})"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-22.04
+          - windows-latest
+          - macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Tauri v2 OS dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            pkg-config
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Rust Toolchain (Stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Rust Cargo Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install Frontend Dependencies (Bun)
+        run: |
+          if [ -f "package.json" ]; then
+            bun install --frozen-lockfile || bun install
+          fi
+        shell: bash
+
+      - name: Frontend Lint & Format Check (Biome)
+        run: |
+          if [ -d "src" ] || [ -f "package.json" ]; then
+            bunx @biomejs/biome check .
+          fi
+        shell: bash
+
+      - name: Rust Format Check (cargo fmt)
+        run: |
+          if [ -f "src-tauri/Cargo.toml" ]; then
+            cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+          fi
+        shell: bash
+
+      - name: Rust Static Analysis (cargo clippy)
+        run: |
+          if [ -f "src-tauri/Cargo.toml" ]; then
+            cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+          fi
+        shell: bash
+
+      - name: Rust Unit & Integration Tests (cargo test)
+        run: |
+          if [ -f "src-tauri/Cargo.toml" ]; then
+            cargo test --manifest-path src-tauri/Cargo.toml
+          fi
+        shell: bash
+
+      - name: Verify Attribution & Legal Notice Integrity
+        run: |
+          test -f LICENSE
+          test -f NOTICE
+          grep -q "Yoga ardiansyah" LICENSE
+          grep -q "Yoga ardiansyah" NOTICE
+          grep -q "https://github.com/yogaardiansyah/rakitray" NOTICE
+        shell: bash
+

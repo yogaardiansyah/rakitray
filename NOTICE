@@ -1,0 +1,90 @@
+================================================================================
+                         RAKITRAY — LEGAL NOTICE & ATTRIBUTION
+================================================================================
+
+Project Name:   Rakitray
+Original Author: Yoga ardiansyah (@yogaardiansyah)
+Repository URL: https://github.com/yogaardiansyah/rakitray
+SPDX License:   AGPL-3.0-only (GNU Affero General Public License v3.0 only)
+
+Copyright (C) 2026 Yoga ardiansyah (@yogaardiansyah). All Rights Reserved.
+
+--------------------------------------------------------------------------------
+1. MANDATORY TERMS UNDER AGPLv3 SECTION 7(b) AND SECTION 5(d)
+--------------------------------------------------------------------------------
+
+Rakitray is licensed under the GNU Affero General Public License version 3.0
+only ("AGPL-3.0-only"). In accordance with Section 7(b) ("Additional Terms —
+Requiring preservation of specified reasonable legal notices or author
+attributions in that material or in the Appropriate Legal Notices displayed by
+works containing it") and Section 5(d) ("Conveying Modified Source Versions —
+Appropriate Legal Notices in Interactive User Interfaces") of the GNU Affero
+General Public License v3.0, the Original Author hereby establishes the
+following mandatory attribution and legal notice preservation conditions.
+
+Any person, organization, or entity that copies, forks, modifies, redistributes
+(in source or binary form), packages, embeds, or deploys Rakitray (including
+operation over a network or cloud environment under Section 13) MUST strictly
+comply with all three (3) requirements below:
+
+  (1) FILE RETENTION
+      You MUST retain both the `LICENSE` file and this `NOTICE` file intact,
+      unmodified, and in the root directory of all source code repositories,
+      source archives, and alongside any compiled binary or installer
+      distributions.
+
+  (2) DERIVATIVE WORK & REPOSITORY ATTRIBUTION
+      If you distribute, publish, or host a fork, modified version, rebranded
+      distribution, or derivative work of Rakitray, your primary documentation
+      (including `README.md`, landing pages, package manifests, and release
+      notes) MUST prominently and legibly state that the work is derived from
+      **Rakitray** created by **Yoga ardiansyah (@yogaardiansyah)**, accompanied
+      by a direct, functional, and clickable hyperlink to the original upstream
+      repository:
+      https://github.com/yogaardiansyah/rakitray
+
+  (3) INTERACTIVE USER INTERFACE & CLI ATTRIBUTION (SECTION 5(d) & 7(b))
+      All interactive user interfaces of the application—both Graphical User
+      Interfaces (GUI) and Command-Line Interfaces (CLI)—MUST preserve and
+      prominently display the "Appropriate Legal Notices" and attribution line:
+
+        "Powered by Rakitray — Created by Yoga ardiansyah"
+        (or, for modified/forked versions:
+        "Based on Rakitray by Yoga ardiansyah (https://github.com/yogaardiansyah/rakitray)")
+
+      Specifically, this notice MUST remain visible and accessible in:
+        a) The application's "About" dialog and/or application footer;
+        b) The system tray context menu "About Rakitray" entry; and
+        c) The CLI version/help output (`rakitray --version` and `rakitray --help`).
+
+--------------------------------------------------------------------------------
+2. PROHIBITION OF MISREPRESENTATION & REBRANDING WITHOUT ATTRIBUTION
+--------------------------------------------------------------------------------
+
+Pursuant to Section 7(c), Section 7(d), and Section 7(e) of the GNU AGPLv3:
+  - You may NOT misrepresent the origin of Rakitray or claim original
+    authorship of the core architecture, Rust supervisor engine, or UI written
+    by Yoga ardiansyah.
+  - Modified versions MUST be clearly marked as modified in relevant source
+    files (Section 5(a)) so that any problems introduced by downstream changes
+    are not erroneously attributed to the Original Author.
+  - Removal, obfuscation, hiding (via CSS, conditional compilation, or feature
+    flags), or suppression of the attribution notices specified in Section 1 of
+    this `NOTICE` file constitutes a material breach of the GNU Affero General
+    Public License v3.0 and immediately terminates your rights under the
+    License pursuant to Section 8 ("Termination").
+
+--------------------------------------------------------------------------------
+3. THIRD-PARTY RUNTIME MODULES DISCLAIMER
+--------------------------------------------------------------------------------
+
+Rakitray acts as a modular local development environment launcher capable of
+downloading and orchestrating third-party open-source portable binaries on
+demand (such as PHP, Nginx, Caddy, MariaDB, PostgreSQL, Redis, Node.js, and
+Bun). Each third-party runtime downloaded at the user's request remains the
+property of its respective copyright holders and is governed by its own
+upstream license (e.g., PHP License, BSD-2-Clause, Apache-2.0, GPLv2, MIT).
+Rakitray does not bundle or re-license those third-party binaries inside its
+core source repository.
+================================================================================
+
