@@ -204,3 +204,92 @@ runtime/
 ├── tmp/                    # PID files, Unix domain sockets, temporary pipes
 └── www/                    # Default web root and local project sites
 ```
+
+---
+
+## 7. PHP INI & Extension Matrix Architecture (v0.2.0)
+
+Rakitray v0.2.0 introduces a deterministic, atomic PHP configuration engine designed to eliminate manual `php.ini` editing and accidental syntax corruption.
+
+```mermaid
+sequenceDiagram
+    participant UI as SolidJS UI (PhpMatrixPanel)
+    participant Cmd as Tauri Commands (src-tauri/src/commands/php_matrix.rs)
+    participant Orch as Supervisor Orchestrator (500ms Debounce)
+    participant Store as PhpMatrixStore (Mutex + Atomic Write)
+    participant PHP as PHP Binary (-n -c tmp.ini -m)
+    participant FPM as PHP-FPM / CGI Supervisor Worker
+
+    UI->>Cmd: toggle_php_extension / apply_php_profile / apply_laravel_preset
+    Cmd->>Orch: Schedule PhpMatrixChange
+    Note over Orch: Debounces Rapid UI Toggles (~500ms)
+    Orch->>Store: write_matrix(version, state, php_bin)
+    Store->>Store: Render INI (DEV/PROD profile + limits + extensions)
+    Store->>Store: Write <version>-generated.ini.tmp + sync_all()
+    Store->>PHP: Validate tmp.ini (php -n -c tmp.ini -m)
+    alt Validation Succeeded
+        PHP-->>Store: Exit code 0 (clean module table)
+        Store->>Store: Backup existing -> <version>-generated.ini.bak
+        Store->>Store: Atomic Rename tmp -> <version>-generated.ini
+        Store->>Store: Write <version>.matrix.toml
+        Store-->>Orch: Ok(RenderedIni)
+        Orch->>FPM: Graceful Worker Reload / Restart
+        alt Restart Succeeded
+            Orch-->>Cmd: Ok(PhpMatrix)
+            Orch->>UI: Dispatch Channel Event (Reloaded)
+        else Restart Failed
+            Orch->>Store: rollback_matrix(version)
+            Orch->>FPM: Re-restart with Backup INI
+            Orch->>UI: Dispatch Channel Event (RolledBack + Reason)
+        end
+    else Validation Failed (e.g. Broken Library or Syntax Error)
+        PHP-->>Store: Exit code != 0 or stderr startup warning
+        Store->>Store: Delete <version>-generated.ini.tmp
+        Store-->>Orch: Err(ValidationFailed)
+        Orch-->>Cmd: Err(ValidationFailed)
+        Orch->>UI: Dispatch Channel Event (RolledBack + Reason)
+    end
+```
+
+### 7.1 Cross-Platform Extension Scanner (`discovery/php_ext.rs`)
+- Scans `ext/` (Windows `.dll`, Linux `.so`).
+- Invokes `<php-bin> -n -m` to reconcile built-in modules compiled into the binary.
+- Categorizes extensions into 5 fixed tiers: `laravelCore`, `databaseCache`, `performanceDebug`, `mediaFormat`, and `other`.
+- Applies dependency ordering (e.g. `mbstring` must precede `exif`, `pdo` must precede `pdo_mysql`).
+
+### 7.2 Atomic Write & User INI Preservation (`drivers/php_matrix_store.rs`)
+- **Per-Version Mutex:** Serializes concurrent writes per PHP version.
+- **Generated INI Separation:** Auto-rendered directives live exclusively in `<version>-generated.ini`.
+- **User Customizations Preserved:** Custom directives live in `<version>-user.ini`, read automatically via `PHP_INI_SCAN_DIR`.
+- **Pre-flight Validation:** Before activating any change, Rakitray launches `<php-bin> -n -c <tmp.ini> -m`. If validation fails, `<tmp.ini>` is destroyed and the active INI is never touched.
+- **Automatic Rollback:** If worker restart fails after activation, the supervisor automatically restores `<version>-generated.ini.bak` and issues a second reload.
+
+---
+
+## 8. Manual Test Checklist (v0.2.0)
+
+### 8.1 Windows Environment (`ext/*.dll`)
+1. **Dynamic DLL Discovery:** Place `php_redis.dll` and `php_xdebug.dll` in `runtime/bin/runtime/php/<version>/ext/`. Open Rakitray -> navigate to "PHP Matrix" -> verify extensions appear under "Database & Cache" and "Performance & Debug".
+2. **Interactive Toggling:** Toggle `redis` ON -> verify generated INI has `extension=redis` -> verify service reloads without dropped requests.
+3. **Dependency Protection:** Attempt to enable `exif` without `mbstring` -> verify validation error or warning prevents orphan activation.
+4. **1-Click Laravel Preset:** Click "⚡ 1-Click Laravel Preset" -> verify all Laravel 12/13 required extensions (`pdo_mysql`, `curl`, `mbstring`, `fileinfo`, `zip`, `bcmath`) activate simultaneously.
+5. **Profile Clone:** Select PHP 8.3 -> Click "⎘ Clone to…" -> select PHP 8.2 -> review diff modal -> confirm clone -> verify PHP 8.2 receives identical profile and limits with isolated `extension_dir`.
+
+### 8.2 Linux & macOS Environment (`ext/*.so` / Static Builds)
+1. **BuiltIn Reconciliation:** Launch Rakitray with a static PHP CLI build -> verify built-in modules (`ctype`, `fileinfo`, `hash`, `pcre`, `session`, `tokenizer`, `xml`) are detected, marked `built-in`, and locked against disabling with informative tooltips.
+2. **Shared Module Toggle:** Install shared `.so` modules -> verify toggling emits `extension=<name>.so` and reloads PHP-FPM pool cleanly.
+3. **Rollback Verification:** Introduce a deliberately corrupt extension line -> trigger apply -> verify Rakitray intercepts validation error, keeps backup INI, and displays error toast.
+
+---
+
+## 9. Critical Area Test Coverage Report
+
+| Subsystem / Area | Test File | Verified Invariants |
+| :--- | :--- | :--- |
+| **INI Template Engine** | `src-tauri/src/drivers/php_fpm.rs` | DEV vs PROD profile rendering, `display_errors` toggling, `xdebug.mode=off` in PROD, topological dependency ordering, newline/null-byte injection rejection. |
+| **Extension Scanner** | `src-tauri/src/discovery/php_ext.rs` | Windows `.dll` parsing, Linux `.so` parsing, `php -n -m` built-in detection, non-panicking missing directory handling, INI & TOML state parsing. |
+| **Atomic Store & Rollback** | `src-tauri/src/drivers/php_matrix_store.rs` | Mutex serialization, atomic rename, `.bak` file creation, validation failure preservation of old INI, mid-write crash resilience, `user.ini` preservation. |
+| **Supervisor Orchestrator** | `src-tauri/src/supervisor/php_matrix.rs` | 500ms debounce collapsing rapid clicks, worker restart sequence, automatic rollback to `.bak` on restart failure, `PhpMatrixEvent` channel dispatch. |
+| **IPC Commands & Security** | `src-tauri/src/commands/php_matrix.rs` | Path traversal (`../`) rejection, newline injection rejection, unknown extension rejection, 3-tier Laravel preset, cross-version profile cloning. |
+| **End-to-End Fake Runtime** | `src-tauri/tests/php_matrix_e2e.rs` | Full headless pipeline execution with stubbed `php` binary mimicking `php -m` and pre-flight `-n -c <tmp> -m` syntax validation. |
+

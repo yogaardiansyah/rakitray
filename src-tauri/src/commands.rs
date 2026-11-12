@@ -1,3 +1,9 @@
+pub mod db;
+pub mod php_matrix;
+pub mod store;
+
+pub use store::list_builtin_stack_templates;
+
 use crate::models::{DiscoveredRuntime, IpcStreamEvent, ProjectSite, ServiceInstance};
 use crate::supervisor::Supervisor;
 use std::sync::Arc;
@@ -51,4 +57,16 @@ pub(crate) async fn save_project_site(
 ) -> Result<(), String> {
     state.save_project_site(site).await;
     Ok(())
+}
+
+#[tauri::command]
+pub(crate) async fn update_instance_config(
+    instance_id: String,
+    patch: crate::models::ConfigPatch,
+    state: State<'_, SupervisorState>,
+) -> Result<ServiceInstance, String> {
+    state
+        .update_instance_config(&instance_id, patch)
+        .await
+        .map_err(|e| e.to_string())
 }

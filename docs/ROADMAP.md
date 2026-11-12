@@ -52,7 +52,7 @@ flowchart LR
 ### `v0.1.0` — Core CLI Engine, Dynamic Rack Supervisor & Hello Laravel
 > **Theme:** Establish the rock-solid Rust process supervisor, dynamic runtime discovery filesystem layout, baseline CLI, and dynamic SolidJS rack UI.
 
-- [ ] **Dynamic Runtime Discovery Hierarchy**:
+- [x] **Dynamic Runtime Discovery Hierarchy**:
   - Automatically index runtimes installed inside the local portable structure:
     ```
     runtime/bin/<category>/<engine>/<version>/
@@ -61,17 +61,17 @@ flowchart LR
     └── mariadb/mariadb/11.4.3/
     ```
   - Zero hardcoded version assumptions; discover installed versions purely through directory traversal and binary execution checks (`--version`).
-- [ ] **Anti-Zombie Process Supervision**:
+- [x] **Anti-Zombie Process Supervision**:
   - **Linux / macOS**: Spawn child services in isolated Process Groups (`setpgid(0, 0)`). Configure Linux child processes with `prctl(PR_SET_PDEATHSIG, SIGTERM)` so child processes terminate if the parent process dies. Escalates stopping from `SIGTERM` to `SIGKILL` after a 5-second graceful timeout.
   - **Windows**: Assign all spawned child processes to a Win32 Job Object configured with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`. Guarantees zero orphaned processes on crash, reboot, or unexpected exit.
-- [ ] **Nginx + Multi-PHP-FPM + MariaDB Core Drivers**:
+- [x] **Nginx + Multi-PHP-FPM + MariaDB Core Drivers**:
   - Dynamic generation of `nginx.conf`, upstream `fastcgi_pass` sockets/ports, and `php-cgi.exe` / `php-fpm` worker pooling.
   - MariaDB automated data directory initialization (`mysql_install_db` / `--initialize-insecure`).
-- [ ] **`rakit` Core CLI**:
+- [x] **`rakit` Core CLI**:
   - `rakit up`: Boots up the rack stack or project environment.
   - `rakit down`: Gracefully halts running service groups.
   - `rakit status`: Real-time terminal dashboard of running instances, PIDs, uptime, and ports.
-- [ ] **SolidJS Dynamic Rack UI & Live Log Channel**:
+- [x] **SolidJS Dynamic Rack UI & Live Log Channel**:
   - Reactive dashboard rendering runtime cards with fine-grained signals (`createSignal`, `createStore`).
   - High-frequency process output streamed over `tauri::ipc::Channel` with 16ms micro-batching to eliminate UI jank.
 

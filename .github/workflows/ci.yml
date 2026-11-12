@@ -77,6 +77,13 @@ jobs:
           fi
         shell: bash
 
+      - name: Frontend Type Check (tsc --noEmit)
+        run: |
+          if [ -f "package.json" ]; then
+            bun run typecheck
+          fi
+        shell: bash
+
       - name: Build Frontend Assets
         run: |
           if [ -f "package.json" ]; then

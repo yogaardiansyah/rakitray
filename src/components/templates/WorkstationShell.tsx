@@ -2,6 +2,8 @@ import { Match, Switch } from "solid-js";
 import { useSupervisor } from "../../store/supervisorStore";
 import {
   DockedLogTerminal,
+  PhpMatrixPanel,
+  RakiStorePanel,
   RuntimeDiscoveryGrid,
   ServiceRackMatrix,
   SidebarNav,
@@ -24,8 +26,14 @@ export function WorkstationShell() {
             <Match when={state.activeTab === "sites"}>
               <SiteRoutingPanel />
             </Match>
+            <Match when={state.activeTab === "phpMatrix"}>
+              <PhpMatrixPanel />
+            </Match>
             <Match when={state.activeTab === "runtimes"}>
               <RuntimeDiscoveryGrid />
+            </Match>
+            <Match when={state.activeTab === "store"}>
+              <RakiStorePanel />
             </Match>
           </Switch>
         </main>

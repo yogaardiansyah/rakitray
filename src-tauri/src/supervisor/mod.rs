@@ -1,3 +1,4 @@
+pub mod php_matrix;
 pub mod runner;
 pub mod telemetry;
 
@@ -8,13 +9,14 @@ use crate::drivers::nginx::NginxDriver;
 use crate::drivers::php_fpm::PhpFpmDriver;
 use crate::drivers::{RuntimePaths, ServiceDriver};
 use crate::models::{
-    DiscoveredRuntime, IpcStreamEvent, LogEntry, LogStream, ProjectSite, ServiceCategory,
-    ServiceInstance, ServiceStatus,
+    DiscoveredRuntime, IpcStreamEvent, LogEntry, LogStream, PhpMatrix, PhpMatrixEvent,
+    PhpProfileMode, ProjectSite, ServiceCategory, ServiceInstance, ServiceStatus,
 };
+use php_matrix::{MatrixOrchestrator, MatrixSupervisorBackend, PhpMatrixChange};
 use runner::{ProcessHandle, Runner};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::ipc::Channel;
 use telemetry::TelemetryCollector;
@@ -43,12 +45,26 @@ pub struct Supervisor {
     log_tx: mpsc::Sender<LogEntry>,
     log_rx: Arc<Mutex<mpsc::Receiver<LogEntry>>>,
     subscribers: Arc<RwLock<Vec<Channel<IpcStreamEvent>>>>,
+    matrix_subscribers: Arc<RwLock<Vec<Channel<PhpMatrixEvent>>>>,
+    debounce_duration: Duration,
+    orchestrator: OnceLock<MatrixOrchestrator>,
 }
 
 impl Supervisor {
     pub fn new(runtime_root: PathBuf) -> Self {
+        Self::with_debounce(runtime_root, Duration::from_millis(500))
+    }
+
+    pub fn with_debounce(runtime_root: PathBuf, debounce_duration: Duration) -> Self {
         let paths = RuntimePaths::new(runtime_root);
         let _ = paths.ensure_dirs();
+
+        // Migration: Contract Section 9.4: migrate legacy runtime/data/mariadb/ to runtime/data/mariadb_1/
+        let legacy_mariadb_data = paths.data.join("mariadb");
+        let migrated_mariadb_data = paths.data.join("mariadb_1");
+        if legacy_mariadb_data.exists() && !migrated_mariadb_data.exists() {
+            let _ = std::fs::rename(&legacy_mariadb_data, &migrated_mariadb_data);
+        }
 
         let mut drivers: HashMap<String, Box<dyn ServiceDriver>> = HashMap::new();
         drivers.insert("nginx".to_string(), Box::new(NginxDriver));
@@ -156,6 +172,9 @@ impl Supervisor {
             log_tx,
             log_rx: Arc::new(Mutex::new(log_rx)),
             subscribers: Arc::new(RwLock::new(Vec::new())),
+            matrix_subscribers: Arc::new(RwLock::new(Vec::new())),
+            debounce_duration,
+            orchestrator: OnceLock::new(),
         }
     }
 
@@ -167,6 +186,42 @@ impl Supervisor {
     pub async fn add_subscriber(&self, channel: Channel<IpcStreamEvent>) {
         let mut subs = self.subscribers.write().await;
         subs.push(channel);
+    }
+
+    pub async fn add_matrix_subscriber(&self, channel: Channel<PhpMatrixEvent>) {
+        let mut subs = self.matrix_subscribers.write().await;
+        subs.push(channel);
+    }
+
+    pub async fn emit_matrix_event(&self, event: PhpMatrixEvent) {
+        let subs = self.matrix_subscribers.read().await;
+        for sub in subs.iter() {
+            let _ = sub.send(event.clone());
+        }
+    }
+
+    pub fn orchestrator(self: &Arc<Self>) -> &MatrixOrchestrator {
+        self.orchestrator.get_or_init(|| {
+            MatrixOrchestrator::new(
+                self.clone() as Arc<dyn MatrixSupervisorBackend>,
+                self.debounce_duration,
+            )
+        })
+    }
+
+    pub async fn get_php_matrix(
+        self: &Arc<Self>,
+        instance_id: &str,
+    ) -> Result<PhpMatrix, SupervisorError> {
+        self.orchestrator().get_matrix(instance_id).await
+    }
+
+    pub async fn apply_php_matrix(
+        self: &Arc<Self>,
+        instance_id: &str,
+        change: PhpMatrixChange,
+    ) -> Result<PhpMatrix, SupervisorError> {
+        self.orchestrator().apply_matrix(instance_id, change).await
     }
 
     fn spawn_batcher(&self) {
@@ -213,7 +268,8 @@ impl Supervisor {
                 TelemetryCollector::poll_metrics(instances.clone()).await;
 
                 let map = instances.read().await;
-                let list: Vec<ServiceInstance> = map.values().cloned().collect();
+                let mut list: Vec<ServiceInstance> = map.values().cloned().collect();
+                list.sort_by(|a, b| a.instance_id.cmp(&b.instance_id));
                 drop(map);
 
                 let subs = subscribers.read().await;
@@ -422,6 +478,175 @@ impl Supervisor {
                     line: "[Router] Reloaded Nginx with updated upstream configuration".to_string(),
                 })
                 .await;
+        }
+    }
+
+    pub async fn restart_instance(&self, id: &str) -> Result<ServiceInstance, SupervisorError> {
+        let inst_opt = {
+            let map = self.instances.read().await;
+            map.get(id).cloned()
+        };
+        #[cfg(unix)]
+        let instance = inst_opt.ok_or_else(|| SupervisorError::NotFound(id.to_string()))?;
+        #[cfg(not(unix))]
+        let _instance = inst_opt.ok_or_else(|| SupervisorError::NotFound(id.to_string()))?;
+
+        #[cfg(unix)]
+        if instance.engine == "php-fpm" {
+            if let Some(pid) = instance.pid {
+                unsafe {
+                    if libc::kill(pid as i32, libc::SIGUSR2) == 0 {
+                        return Ok(instance);
+                    }
+                }
+            }
+        }
+
+        let _ = self.stop_instance(id).await;
+        self.start_instance(id).await
+    }
+
+    pub async fn update_instance_config(
+        &self,
+        id: &str,
+        patch: crate::models::ConfigPatch,
+    ) -> Result<ServiceInstance, SupervisorError> {
+        let mut instances = self.instances.write().await;
+        let instance = instances
+            .get_mut(id)
+            .ok_or_else(|| SupervisorError::NotFound(id.to_string()))?;
+
+        if let Some(port) = patch.port {
+            instance.port = Some(port);
+        }
+        if let Some(profile) = patch.profile {
+            instance.profile = profile;
+        }
+
+        let is_running = instance.status == ServiceStatus::Running;
+        drop(instances);
+
+        if patch.restart && is_running {
+            self.restart_instance(id).await
+        } else {
+            let map = self.instances.read().await;
+            map.get(id)
+                .cloned()
+                .ok_or_else(|| SupervisorError::NotFound(id.to_string()))
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl MatrixSupervisorBackend for Supervisor {
+    async fn resolve_version(
+        &self,
+        instance_id: &str,
+    ) -> Result<(String, PhpProfileMode), SupervisorError> {
+        let map = self.instances.read().await;
+        let inst = map
+            .get(instance_id)
+            .ok_or_else(|| SupervisorError::NotFound(instance_id.to_string()))?;
+        let profile = if inst.profile == "prod" {
+            PhpProfileMode::Prod
+        } else {
+            PhpProfileMode::Dev
+        };
+        Ok((inst.version.clone(), profile))
+    }
+
+    async fn find_instances_for_version(&self, version: &str) -> Vec<ServiceInstance> {
+        let map = self.instances.read().await;
+        map.values()
+            .filter(|i| i.version == version)
+            .cloned()
+            .collect()
+    }
+
+    async fn restart_instance(&self, instance_id: &str) -> Result<(), SupervisorError> {
+        self.restart_instance(instance_id).await.map(|_| ())
+    }
+
+    async fn emit_log(&self, instance_id: &str, line: String) {
+        let ts = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as u64;
+        let _ = self
+            .log_tx
+            .send(LogEntry {
+                instance_id: instance_id.to_string(),
+                timestamp_ms: ts,
+                stream: LogStream::System,
+                line,
+            })
+            .await;
+    }
+
+    async fn emit_event(&self, event: PhpMatrixEvent) {
+        self.emit_matrix_event(event).await;
+    }
+
+    async fn sync_version_profile(&self, version: &str, profile: PhpProfileMode) {
+        let profile_str = match profile {
+            PhpProfileMode::Dev => "dev",
+            PhpProfileMode::Prod => "prod",
+        };
+        let mut map = self.instances.write().await;
+        for inst in map.values_mut() {
+            if inst.version == version {
+                inst.profile = profile_str.to_string();
+            }
+        }
+    }
+
+    fn config_php_dir(&self) -> PathBuf {
+        self.paths.config.join("php")
+    }
+
+    fn resolve_php_root(&self, version: &str) -> Option<PathBuf> {
+        let candidates = [
+            self.paths.root.join("bin/runtime/php").join(version),
+            self.paths.root.join("bin/runtime/php-cgi").join(version),
+            self.paths.root.join("bin/php").join(version),
+            self.paths.root.join("bin/php-cgi").join(version),
+        ];
+        for candidate in candidates {
+            if candidate.exists() {
+                return Some(candidate);
+            }
+        }
+
+        let bin = self.resolve_php_binary(version)?;
+        bin.parent().map(|p| {
+            if p.file_name()
+                .map(|n| n == "bin" || n == "sbin")
+                .unwrap_or(false)
+            {
+                p.parent().unwrap_or(p).to_path_buf()
+            } else {
+                p.to_path_buf()
+            }
+        })
+    }
+
+    fn resolve_php_binary(&self, version: &str) -> Option<PathBuf> {
+        let runtimes = self.scan_runtimes();
+        runtimes
+            .iter()
+            .find(|r| {
+                (r.engine == "php" || r.engine == "php-cgi") && r.version == version && r.is_valid
+            })
+            .map(|r| r.binary_path.clone())
+    }
+
+    fn resolve_ext_dir(&self, version: &str) -> Option<PathBuf> {
+        let root = self.resolve_php_root(version)?;
+        let ext = root.join("ext");
+        if ext.is_dir() {
+            Some(ext)
+        } else {
+            None
         }
     }
 }

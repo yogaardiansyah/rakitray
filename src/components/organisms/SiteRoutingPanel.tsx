@@ -4,11 +4,9 @@ import { useSupervisor } from "../../store/supervisorStore";
 export function SiteRoutingPanel() {
   const { state, saveProjectSite } = useSupervisor();
 
-  const [name, setName] = createSignal("hello-laravel");
-  const [domain, setDomain] = createSignal("hello-laravel.test");
-  const [rootPath, setRootPath] = createSignal(
-    "/home/yoga/Documents/StartUp/rakitray/runtime/www/hello-laravel/public",
-  );
+  const [name, setName] = createSignal("");
+  const [domain, setDomain] = createSignal("");
+  const [rootPath, setRootPath] = createSignal("");
   const [webServerId, setWebServerId] = createSignal("nginx_1");
   const [runtimeId, setRuntimeId] = createSignal("php_83");
   const [port, setPort] = createSignal(8088);
@@ -83,7 +81,7 @@ export function SiteRoutingPanel() {
               class="dense-input"
               value={name()}
               onInput={(e) => setName(e.currentTarget.value)}
-              placeholder="e.g. hello-laravel"
+              placeholder="e.g. my-app"
             />
           </div>
 
@@ -95,7 +93,7 @@ export function SiteRoutingPanel() {
               class="dense-input"
               value={domain()}
               onInput={(e) => setDomain(e.currentTarget.value)}
-              placeholder="e.g. hello-laravel.test"
+              placeholder="e.g. my-app.test"
             />
           </div>
         </div>
@@ -210,21 +208,8 @@ export function SiteRoutingPanel() {
           <For
             each={state.sites}
             fallback={
-              <div class="routes-row">
-                <span class="route-name">hello-laravel</span>
-                <span class="route-domain">hello-laravel.test</span>
-                <span class="route-server">nginx_1</span>
-                <span class="route-upstream">{runtimeId()}</span>
-                <span class="route-link">
-                  <a
-                    href={`http://127.0.0.1:${port()}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    class="link-badge"
-                  >
-                    http://127.0.0.1:{port()} ↗
-                  </a>
-                </span>
+              <div class="routes-empty text-xs text-slate-500 py-4 text-center">
+                No project sites routed yet. Add a route above.
               </div>
             }
           >

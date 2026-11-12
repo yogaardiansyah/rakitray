@@ -1,9 +1,10 @@
 import { For, Show } from "solid-js";
 import { useSupervisor } from "../../store/supervisorStore";
 import { MasterControlStrip, ServiceRow } from "../molecules";
+import { EmptyRackOnboarding } from "./EmptyRackOnboarding";
 
 export function ServiceRackMatrix() {
-  const { state, scanRuntimes } = useSupervisor();
+  const { state } = useSupervisor();
 
   return (
     <div class="service-rack-matrix">
@@ -20,21 +21,7 @@ export function ServiceRackMatrix() {
           <div class="col-actions">ACTIONS</div>
         </div>
 
-        <Show
-          when={state.instances.length > 0}
-          fallback={
-            <div class="empty-state-dense">
-              <p>No services currently configured in Dynamic Rack.</p>
-              <button
-                type="button"
-                class="dense-action-btn btn-primary-solid"
-                onClick={scanRuntimes}
-              >
-                Scan Installed Runtimes
-              </button>
-            </div>
-          }
-        >
+        <Show when={state.instances.length > 0} fallback={<EmptyRackOnboarding />}>
           <div class="dense-table-body">
             <For each={state.instances}>{(instance) => <ServiceRow instance={instance} />}</For>
           </div>

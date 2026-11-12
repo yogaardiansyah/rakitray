@@ -1,0 +1,20 @@
+[engine]
+name = "mailpit"
+category = "tool"
+version = "1.21.1"
+default_port = 8025
+
+[binaries]
+daemon = "mailpit"
+
+[lifecycle]
+start_args = [
+  "--listen",
+  "{{bind_address}}:{{port}}",
+  "--smtp",
+  "{{bind_address}}:1025",
+  "--db-file",
+  "{{data_dir}}/mailpit.db",
+]
+ready_check = { kind = "tcp", timeout_secs = 10 }
+

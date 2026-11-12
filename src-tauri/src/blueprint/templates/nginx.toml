@@ -1,0 +1,22 @@
+[engine]
+name = "nginx"
+category = "web_server"
+version = "1.26.2"
+default_port = 8088
+
+[binaries]
+daemon = "sbin/nginx"
+
+[lifecycle]
+start_args = [
+  "-c",
+  "{{config_file}}",
+  "-g",
+  "daemon off;",
+]
+ready_check = { kind = "tcp", timeout_secs = 10 }
+
+[config]
+template = "conf/nginx.conf.tpl"
+output = "config/nginx/nginx.conf"
+

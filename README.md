@@ -80,6 +80,13 @@ Local web and backend development shouldn't require sacrificing gigabytes of dis
 ### 7. Smart Port Doctor
 - Pre-flight socket scanner detects port collisions (`80`, `443`, `3306`, `5432`, `6379`, `8080`) before starting a service, identifies the conflicting process name and PID, and offers one-click process termination or port remapping.
 
+### 8. PHP INI & Extension Matrix (v0.2.0)
+- **Atomic INI Configuration:** Dual-profile configuration (`DEV` vs `PROD`) with instant worker reload and rollback protection if pre-flight validation fails.
+- **Dynamic Module Discovery:** Scans portable `ext/` folders (`.dll` on Windows, `.so` on Linux) and reconciles compiled-in core modules via `php -m`.
+- **1-Click Laravel 12/13 Preset:** Automatically enables all core, database, and recommended extensions (`pdo_mysql`, `mbstring`, `curl`, `fileinfo`, `zip`, `bcmath`, `redis`) in one click.
+- **Cross-Version Profile Clone:** Synchronize profiles, limits, and extension sets between installed PHP versions while cleanly skipping unavailable modules.
+- **Preserved User Directives:** Directives in `<version>-user.ini` are preserved intact and scanned automatically via `PHP_INI_SCAN_DIR`.
+
 ---
 
 ## Tech Stack

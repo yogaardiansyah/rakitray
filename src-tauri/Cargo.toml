@@ -1,7 +1,7 @@
 [package]
 default-run = "rakitray"
 name = "rakitray"
-version = "0.1.0"
+version = "0.2.0"
 description = "Ultra-fast, lightweight, modular Local Development Environment Launcher"
 authors = ["Yoga ardiansyah <https://github.com/yogaardiansyah>"]
 license = "AGPL-3.0-only"
@@ -25,6 +25,13 @@ sysinfo = "0.33"
 toml = "0.8"
 async-trait = "0.1"
 clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
+sha2 = "0.10"
+futures-util = "0.3"
+tar = "0.4"
+flate2 = "1.0"
+zip = { version = "2.2", default-features = false, features = ["deflate"] }
+lzma-rs = "0.3"
 
 [[bin]]
 name = "rakit"

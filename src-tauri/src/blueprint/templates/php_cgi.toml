@@ -1,0 +1,23 @@
+[engine]
+name = "php"
+category = "runtime"
+version = "8.3.12"
+default_port = 9000
+
+[binaries]
+daemon = "bin/php-cgi"
+client = "bin/php"
+
+[lifecycle]
+start_args = [
+  "-b",
+  "{{bind_address}}:{{port}}",
+  "-c",
+  "{{config_file}}",
+]
+ready_check = { kind = "tcp", timeout_secs = 10 }
+
+[config]
+template = "conf/php.ini.tpl"
+output = "config/php/{{version}}-generated.ini"
+

@@ -61,7 +61,14 @@ pub trait ServiceDriver: Send + Sync {
     ) -> Result<Command, DriverError>;
 }
 
+pub mod blueprint_driver;
 pub mod generic;
 pub mod mariadb;
 pub mod nginx;
 pub mod php_fpm;
+pub mod php_matrix_store;
+
+pub use blueprint_driver::BlueprintDriver;
+
+pub use php_fpm::{default_limits_for_profile, render_ini, RenderedIni};
+pub use php_matrix_store::{MatrixStoreError, PhpMatrixState, PhpMatrixStore};

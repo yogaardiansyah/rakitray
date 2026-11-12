@@ -25,10 +25,22 @@ export function SidebarNav() {
       pillClass: "badge-laravel",
     },
     {
+      id: "phpMatrix",
+      label: "PHP Matrix",
+      badge: () => "v0.2",
+      pillClass: "badge-matrix",
+    },
+    {
       id: "runtimes",
       label: "Runtime Binaries",
       badge: () => `${discoveredCount()}`,
       pillClass: "badge-runtimes",
+    },
+    {
+      id: "store",
+      label: "RakiStore",
+      badge: () => "v0.3",
+      pillClass: "badge-store",
     },
   ];
 
@@ -39,7 +51,7 @@ export function SidebarNav() {
           <StatusLed status="running" size="sm" />
           <span class="logo-text">RAKITRAY</span>
         </div>
-        <span class="version-tag">v0.1.0</span>
+        <span class="version-tag">v0.2.0</span>
       </div>
 
       <nav class="dense-sidebar-menu">

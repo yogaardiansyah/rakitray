@@ -1,3 +1,5 @@
+pub mod php_ext;
+
 use crate::models::{DiscoveredRuntime, ServiceCategory};
 use std::path::{Path, PathBuf};
 
@@ -78,13 +80,19 @@ pub fn scan_runtimes(runtime_root: &Path) -> Vec<DiscoveredRuntime> {
                                     continue;
                                 }
                                 let version = ver_entry.file_name().to_string_lossy().to_string();
+                                let manifest_path = ver_path.join("rakit-manifest.toml");
+                                let has_manifest = manifest_path.exists()
+                                    && std::fs::read_to_string(&manifest_path)
+                                        .map(|c| crate::blueprint::parse_blueprint(&c).is_ok())
+                                        .unwrap_or(false);
+
                                 let binary_path = find_engine_binary(&engine, &ver_path);
 
                                 runtimes.push(DiscoveredRuntime {
                                     category,
                                     engine: engine.clone(),
                                     version,
-                                    is_valid: binary_path.is_some(),
+                                    is_valid: has_manifest && binary_path.is_some(),
                                     binary_path: binary_path.unwrap_or(ver_path),
                                 });
                             }
@@ -93,38 +101,6 @@ pub fn scan_runtimes(runtime_root: &Path) -> Vec<DiscoveredRuntime> {
                 }
             }
         }
-    }
-
-    // Default virtual fallbacks if local directory is empty
-    if runtimes.is_empty() {
-        runtimes.push(DiscoveredRuntime {
-            category: ServiceCategory::WebServer,
-            engine: "nginx".to_string(),
-            version: "1.26.2".to_string(),
-            binary_path: bin_dir.join("webserver/nginx/1.26.2/nginx"),
-            is_valid: true,
-        });
-        runtimes.push(DiscoveredRuntime {
-            category: ServiceCategory::Runtime,
-            engine: "php".to_string(),
-            version: "8.3.14".to_string(),
-            binary_path: bin_dir.join("runtime/php/8.3.14/php-cgi"),
-            is_valid: true,
-        });
-        runtimes.push(DiscoveredRuntime {
-            category: ServiceCategory::Runtime,
-            engine: "php".to_string(),
-            version: "8.2.20".to_string(),
-            binary_path: bin_dir.join("runtime/php/8.2.20/php-cgi"),
-            is_valid: true,
-        });
-        runtimes.push(DiscoveredRuntime {
-            category: ServiceCategory::Database,
-            engine: "mariadb".to_string(),
-            version: "11.4.4".to_string(),
-            binary_path: bin_dir.join("database/mariadb/11.4.4/bin/mariadbd"),
-            is_valid: true,
-        });
     }
 
     runtimes

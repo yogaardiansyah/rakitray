@@ -8,7 +8,7 @@ import type {
   ServiceInstance,
 } from "../types/ipc";
 
-export type ActiveTab = "rack" | "sites" | "runtimes";
+export type ActiveTab = "rack" | "sites" | "phpMatrix" | "runtimes" | "store";
 
 export interface SupervisorState {
   instances: ServiceInstance[];
