@@ -16,11 +16,11 @@ src-tauri/WixTools/
 **/*.rs.bk
 
 # Rakitray Local Runtime & Sandbox Directories (used during testing/dev)
-runtime/
-bin/
-data/
-logs/
-tmp/
+/runtime/
+/bin/
+/data/
+/logs/
+/tmp/
 *.log
 *.pid
 *.sock
