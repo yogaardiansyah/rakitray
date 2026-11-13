@@ -1,0 +1,16 @@
+[engine]
+name = "java"
+category = "runtime"
+version = "{{version}}"
+
+[binaries]
+daemon = "bin/java"
+client = "bin/javac"
+
+[lifecycle]
+start_args = ["-version"]
+
+[lifecycle.ready_check]
+kind = "tcp"
+timeout_secs = 5
+

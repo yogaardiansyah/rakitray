@@ -7,7 +7,7 @@ import type {
   PhpIniDirective,
   PhpProfileMode,
 } from "../../types/phpMatrix";
-import { ActionButton, ExtensionCheckbox, ProfileBadge, StatusLed } from "../atoms";
+import { ActionButton, ExtensionCheckbox, Icon, ProfileBadge, StatusLed } from "../atoms";
 import { PendingBar, ProfileToggle } from "../molecules";
 
 const CATEGORY_METADATA: { id: ExtensionCategory; title: string; subtitle: string }[] = [
@@ -62,6 +62,7 @@ export function PhpMatrixPanel() {
   const [showCloneModal, setShowCloneModal] = createSignal(false);
 
   const [searchQuery, setSearchQuery] = createSignal("");
+  const [runtimeFilter, setRuntimeFilter] = createSignal("");
   const [sectionFilter, setSectionFilter] = createSignal("All");
   const [showAddForm, setShowAddForm] = createSignal(false);
   const [newKey, setNewKey] = createSignal("");
@@ -75,6 +76,13 @@ export function PhpMatrixPanel() {
   });
 
   const phpInstances = () => supervisorState.instances.filter((i) => i.category === "runtime");
+  const filteredPhpInstances = createMemo(() => {
+    const q = runtimeFilter().trim().toLowerCase();
+    if (!q) return phpInstances();
+    return phpInstances().filter(
+      (i) => i.displayName.toLowerCase().includes(q) || i.version.toLowerCase().includes(q),
+    );
+  });
 
   // Auto-select first PHP instance if none selected
   createEffect(() => {
@@ -244,11 +252,9 @@ export function PhpMatrixPanel() {
         <div class="matrix-title-area">
           <div class="matrix-title-row">
             <h3 class="font-bold">PHP INI & Extension Matrix</h3>
-            <span class="matrix-engine-pill font-mono">Dual-Profile Supervisor</span>
+            <span class="matrix-engine-pill font-mono">DEV / PROD</span>
           </div>
-          <p class="subtitle">
-            Atomic configuration engine with instant worker reload and rollback protection
-          </p>
+          <p class="subtitle">Manage per-version PHP extensions and php.ini directives</p>
         </div>
 
         {/* Action Controls */}
@@ -257,14 +263,25 @@ export function PhpMatrixPanel() {
             <label for="runtime-select" class="control-label font-mono">
               RUNTIME:
             </label>
+            <Show when={phpInstances().length > 4}>
+              <input
+                type="search"
+                class="dense-input font-mono"
+                style={{ width: "110px", height: "30px" }}
+                placeholder="Filter PHP..."
+                aria-label="Filter PHP versions"
+                value={runtimeFilter()}
+                onInput={(e) => setRuntimeFilter(e.currentTarget.value)}
+              />
+            </Show>
             <select
               id="runtime-select"
               class="dense-select font-mono"
               value={matrixState.selectedInstanceId}
               onChange={(e) => void selectInstance(e.currentTarget.value)}
-              disabled={phpInstances().length === 0 || matrixState.isLoading}
+              disabled={filteredPhpInstances().length === 0 || matrixState.isLoading}
             >
-              <For each={phpInstances()}>
+              <For each={filteredPhpInstances()}>
                 {(inst) => (
                   <option value={inst.instanceId} class="dense-option">
                     {inst.displayName} (v{inst.version}) — {getLaravelBadge(inst.version)}
@@ -287,7 +304,8 @@ export function PhpMatrixPanel() {
             loading={matrixState.isLoading}
             title="Enable all Laravel 12/13 core and recommended extensions in one click"
           >
-            ⚡ 1-Click Laravel Preset
+            <Icon name="zap" size={13} />
+            <span>1-Click Laravel Preset</span>
           </ActionButton>
 
           <Show when={otherPhpInstances().length > 0}>
@@ -297,7 +315,8 @@ export function PhpMatrixPanel() {
                 onClick={handleOpenClone}
                 disabled={!currentMatrix() || matrixState.isLoading}
               >
-                ⎘ Clone to…
+                <Icon name="copy" size={13} />
+                <span>Clone to…</span>
               </ActionButton>
             </div>
           </Show>
@@ -312,25 +331,41 @@ export function PhpMatrixPanel() {
       </Show>
 
       <Show when={matrixState.applyStatus === "reloaded"}>
-        <div class="matrix-banner banner-success font-mono">
-          ✓ Configuration validated successfully. PHP workers reloaded without downtime.
-        </div>
+        <output aria-live="polite" class="matrix-banner banner-success font-mono">
+          <span class="banner-inline-msg">
+            <Icon name="check" size={14} />
+            <span>
+              Configuration validated successfully. PHP workers reloaded without downtime.
+            </span>
+          </span>
+        </output>
       </Show>
 
       <Show when={matrixState.applyStatus === "rolledBack"}>
-        <div class="matrix-banner banner-error font-mono">
-          ✕ INI validation failed. State automatically rolled back to previous backup.
+        <output aria-live="polite" class="matrix-banner banner-error font-mono">
+          <span class="banner-inline-msg">
+            <Icon name="x" size={14} />
+            <span>INI validation failed. State automatically rolled back to previous backup.</span>
+          </span>
           <Show when={matrixState.lastRollbackReason}>
             <div class="rollback-reason">{matrixState.lastRollbackReason}</div>
           </Show>
-        </div>
+        </output>
       </Show>
 
       <Show when={matrixState.error}>
-        <div class="matrix-banner banner-error font-mono">
-          <span>✕ Error: {matrixState.error}</span>
-          <button type="button" class="banner-dismiss" onClick={clearError}>
-            ✕
+        <div role="alert" class="matrix-banner banner-error font-mono">
+          <span class="banner-inline-msg">
+            <Icon name="x" size={14} />
+            <span>Error: {matrixState.error}</span>
+          </span>
+          <button
+            type="button"
+            class="banner-dismiss"
+            onClick={clearError}
+            aria-label="Dismiss error"
+          >
+            <Icon name="x" size={13} />
           </button>
         </div>
       </Show>
@@ -338,9 +373,17 @@ export function PhpMatrixPanel() {
       <Show when={matrixState.warnings.length > 0}>
         <div class="matrix-banner banner-warning font-mono">
           <div class="warning-header">
-            <span>⚠ Presets & Compatibility Warnings:</span>
-            <button type="button" class="banner-dismiss" onClick={clearWarnings}>
-              ✕
+            <span class="banner-inline-msg">
+              <Icon name="alert" size={14} />
+              <span>Presets & Compatibility Warnings:</span>
+            </span>
+            <button
+              type="button"
+              class="banner-dismiss"
+              onClick={clearWarnings}
+              aria-label="Dismiss warnings"
+            >
+              <Icon name="x" size={13} />
             </button>
           </div>
           <ul class="warning-list">
@@ -354,9 +397,11 @@ export function PhpMatrixPanel() {
         when={currentMatrix()}
         fallback={
           <div class="empty-state-dense font-mono">
-            {phpInstances().length === 0
-              ? "No PHP runtimes installed in runtime/bin/. Scan runtimes in Runtime Binaries tab."
-              : "Select a PHP runtime to view and edit its extension matrix."}
+            {matrixState.isLoading
+              ? "Loading PHP extension matrix…"
+              : phpInstances().length === 0
+                ? "No PHP runtimes installed in runtime/bin/. Scan runtimes in Runtime Binaries tab."
+                : "Select a PHP runtime to view and edit its extension matrix."}
           </div>
         }
       >
@@ -406,7 +451,7 @@ export function PhpMatrixPanel() {
         <div class="terminal-commands-section">
           <div class="terminal-section-header">
             <div class="terminal-title-area">
-              <h4 class="terminal-heading font-mono">Terminal Commands / PHP INI Directives</h4>
+              <h4 class="terminal-heading font-mono">PHP INI Directives</h4>
               <span class="terminal-subtitle">
                 Allow/deny and configure all runtime directives, limits, opcache, and custom
                 parameters.
@@ -510,11 +555,12 @@ export function PhpMatrixPanel() {
                     class={`terminal-toggle-pill ${d.enabled ? "pill-enabled" : "pill-disabled"}`}
                     onClick={() => handleToggleDirective(d)}
                     title={d.enabled ? "Click to disable" : "Click to enable"}
+                    aria-label={`${d.enabled ? "Disable" : "Enable"} ${d.key}`}
                     disabled={matrixState.isLoading}
                   >
-                    <span class="pill-icon">{d.enabled ? "✓" : "✕"}</span>
+                    <Icon name={d.enabled ? "check" : "x"} size={11} />
                     <span class="pill-status">{d.enabled ? "On" : "Off"}</span>
-                    <span class="pill-caret">▼</span>
+                    <Icon name="chevronDown" size={11} />
                   </button>
 
                   {/* Right Compartment */}
@@ -539,18 +585,20 @@ export function PhpMatrixPanel() {
                               class="terminal-action-btn"
                               onClick={() => handleStartEdit(d)}
                               title="Edit value"
+                              aria-label={`Edit ${d.key}`}
                               disabled={matrixState.isLoading}
                             >
-                              ✎
+                              <Icon name="edit" size={12} />
                             </button>
                             <button
                               type="button"
                               class="terminal-action-btn btn-remove"
                               onClick={() => handleRemoveDirective(d)}
                               title={d.custom ? "Delete custom directive" : "Disable directive"}
+                              aria-label={`${d.custom ? "Delete" : "Disable"} ${d.key}`}
                               disabled={matrixState.isLoading}
                             >
-                              ✕
+                              <Icon name="x" size={12} />
                             </button>
                           </div>
                         </>
@@ -572,20 +620,22 @@ export function PhpMatrixPanel() {
                         <button
                           type="button"
                           class="terminal-action-btn"
-                          style={{ color: "#34d399" }}
+                          style={{ color: "#4ade80" }}
                           onClick={() => void handleCommitEdit(d.key)}
                           title="Save (Enter)"
+                          aria-label={`Save ${d.key}`}
                         >
-                          ✓
+                          <Icon name="check" size={12} />
                         </button>
                         <button
                           type="button"
                           class="terminal-action-btn"
-                          style={{ color: "#94a3b8" }}
+                          style={{ color: "var(--text-muted)" }}
                           onClick={handleCancelEdit}
                           title="Cancel (Esc)"
+                          aria-label="Cancel edit"
                         >
-                          ✕
+                          <Icon name="x" size={12} />
                         </button>
                       </div>
                     </Show>
@@ -635,16 +685,29 @@ export function PhpMatrixPanel() {
 
       {/* Clone Confirmation Modal */}
       <Show when={showCloneModal()}>
-        <div class="modal-backdrop">
-          <div class="clone-modal font-mono">
+        <div
+          class="modal-backdrop"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setShowCloneModal(false);
+          }}
+        >
+          <dialog
+            open
+            aria-modal="true"
+            aria-labelledby="clone-modal-title"
+            class="clone-modal font-mono"
+          >
             <div class="modal-header">
-              <h4 class="font-bold">Clone PHP Profile & Extensions</h4>
+              <h4 id="clone-modal-title" class="font-bold">
+                Clone PHP Profile & Extensions
+              </h4>
               <button
                 type="button"
                 class="modal-close-btn"
+                aria-label="Close modal"
                 onClick={() => setShowCloneModal(false)}
               >
-                ✕
+                <Icon name="x" size={14} />
               </button>
             </div>
 
@@ -715,7 +778,7 @@ export function PhpMatrixPanel() {
                 Confirm & Clone
               </ActionButton>
             </div>
-          </div>
+          </dialog>
         </div>
       </Show>
     </div>

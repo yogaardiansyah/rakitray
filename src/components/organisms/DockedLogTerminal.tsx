@@ -1,9 +1,10 @@
-import { For, createEffect, createMemo } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 import { useSupervisor } from "../../store/supervisorStore";
 import { LogFilterBar } from "../molecules";
 
 export function DockedLogTerminal() {
   const { state } = useSupervisor();
+  const [collapsed, setCollapsed] = createSignal(true);
   let logViewportRef: HTMLDivElement | undefined;
 
   const filteredLogs = createMemo(() => {
@@ -29,29 +30,31 @@ export function DockedLogTerminal() {
   };
 
   return (
-    <div class="docked-log-terminal">
-      <LogFilterBar />
+    <div class={`docked-log-terminal ${collapsed() ? "docked-log-terminal-collapsed" : ""}`}>
+      <LogFilterBar collapsed={collapsed()} onToggleCollapse={() => setCollapsed((v) => !v)} />
 
-      <div class="log-viewport font-mono" ref={logViewportRef}>
-        <For
-          each={filteredLogs()}
-          fallback={
-            <div class="terminal-empty">
-              [Supervisor] Ready. Start a service in the rack to stream live stdout/stderr.
-            </div>
-          }
-        >
-          {(entry) => (
-            <div class={`terminal-line stream-${entry.stream}`}>
-              <span class="term-time">{formatTimestamp(entry.timestampMs)}</span>
-              <span class="term-source">
-                [{entry.instanceId}:{entry.stream}]
-              </span>
-              <span class="term-msg">{entry.line}</span>
-            </div>
-          )}
-        </For>
-      </div>
+      <Show when={!collapsed()}>
+        <div class="log-viewport font-mono" ref={logViewportRef}>
+          <For
+            each={filteredLogs()}
+            fallback={
+              <div class="terminal-empty">
+                [Supervisor] Ready. Start a service in the rack to stream live stdout/stderr.
+              </div>
+            }
+          >
+            {(entry) => (
+              <div class={`terminal-line stream-${entry.stream}`}>
+                <span class="term-time">{formatTimestamp(entry.timestampMs)}</span>
+                <span class="term-source">
+                  [{entry.instanceId}:{entry.stream}]
+                </span>
+                <span class="term-msg">{entry.line}</span>
+              </div>
+            )}
+          </For>
+        </div>
+      </Show>
     </div>
   );
 }

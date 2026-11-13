@@ -1,26 +1,71 @@
-import { For, Show, createSignal } from "solid-js";
+import { For, Show, createMemo, createSignal } from "solid-js";
 import { useSupervisor } from "../../store/supervisorStore";
+import { Icon } from "../atoms";
 
 export function SiteRoutingPanel() {
-  const { state, saveProjectSite } = useSupervisor();
+  const { state, saveProjectSite, deleteProjectSite } = useSupervisor();
 
   const [name, setName] = createSignal("");
   const [domain, setDomain] = createSignal("");
+  const [domainTouched, setDomainTouched] = createSignal(false);
   const [rootPath, setRootPath] = createSignal("");
   const [webServerId, setWebServerId] = createSignal("nginx_1");
   const [runtimeId, setRuntimeId] = createSignal("php_83");
   const [port, setPort] = createSignal(8088);
+  const [siteFilter, setSiteFilter] = createSignal("");
   const [isSaving, setIsSaving] = createSignal(false);
   const [statusMsg, setStatusMsg] = createSignal<string | null>(null);
   const [statusType, setStatusType] = createSignal<"success" | "error">("success");
   const [copiedSnippet, setCopiedSnippet] = createSignal(false);
 
   const phpInstances = () => state.instances.filter((i) => i.category === "runtime");
-
   const webInstances = () => state.instances.filter((i) => i.category === "web_server");
+  const instanceLabel = (id: string) =>
+    state.instances.find((i) => i.instanceId === id)?.displayName ?? id;
+  const instanceStatus = (id: string) =>
+    state.instances.find((i) => i.instanceId === id)?.status ?? "stopped";
+  const isWebRunning = () => instanceStatus(webServerId()) === "running";
+  const isPhpRunning = () => instanceStatus(runtimeId()) === "running";
+
+  const handleEditSite = (site: (typeof state.sites)[number]) => {
+    setName(site.name);
+    setDomain(site.domain);
+    setDomainTouched(true);
+    setRootPath(site.rootPath);
+    setWebServerId(site.webServerId);
+    setRuntimeId(site.runtimeId);
+    setPort(site.port);
+  };
+
+  const filteredSites = createMemo(() => {
+    const q = siteFilter().trim().toLowerCase();
+    if (!q) return state.sites;
+    return state.sites.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.domain.toLowerCase().includes(q) ||
+        String(s.port).includes(q),
+    );
+  });
+
+  const handleNameInput = (val: string) => {
+    setName(val);
+    if (!domainTouched()) {
+      const slug = val
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]+/g, "-")
+        .replace(/^-|-$/g, "");
+      setDomain(slug ? `${slug}.test` : "");
+    }
+  };
+
+  const isFormValid = () =>
+    name().trim().length > 0 && domain().trim().length > 0 && rootPath().trim().length > 0;
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
+    if (!isFormValid()) return;
     setIsSaving(true);
     setStatusMsg(null);
 
@@ -36,11 +81,15 @@ export function SiteRoutingPanel() {
     setIsSaving(false);
     if (success) {
       setStatusType("success");
-      setStatusMsg("✓ Routing applied & Nginx reloaded");
+      setStatusMsg(
+        isWebRunning()
+          ? "Site route saved and web server reloaded."
+          : "Site route saved. Start Nginx in Service Rack to serve.",
+      );
       setTimeout(() => setStatusMsg(null), 4000);
     } else {
       setStatusType("error");
-      setStatusMsg("✕ Failed to apply routing to Nginx");
+      setStatusMsg("Failed to save site route.");
     }
   };
 
@@ -55,21 +104,20 @@ export function SiteRoutingPanel() {
     <div class="site-routing-panel dense-card">
       <div class="panel-header-dense">
         <div>
-          <h3>Project Upstream & Virtual Hosts</h3>
-          <p class="subtitle">
-            Maps domain and document root to supervised web and runtime engines
-          </p>
+          <h3>Local Sites & Domains</h3>
+          <p class="subtitle">Route a local domain and folder to a web server and PHP version</p>
         </div>
-        <span class="preset-pill font-mono">Laravel-First</span>
+        <span class="preset-pill font-mono">Nginx · FPM</span>
       </div>
 
       <form onSubmit={handleSubmit} class="dense-form">
         <Show when={statusMsg()}>
-          <div
+          <output
+            aria-live="polite"
             class={`routing-banner ${statusType() === "success" ? "banner-success" : "banner-error"}`}
           >
             {statusMsg()}
-          </div>
+          </output>
         </Show>
 
         <div class="form-row-dense">
@@ -80,7 +128,7 @@ export function SiteRoutingPanel() {
               type="text"
               class="dense-input"
               value={name()}
-              onInput={(e) => setName(e.currentTarget.value)}
+              onInput={(e) => handleNameInput(e.currentTarget.value)}
               placeholder="e.g. my-app"
             />
           </div>
@@ -92,7 +140,10 @@ export function SiteRoutingPanel() {
               type="text"
               class="dense-input"
               value={domain()}
-              onInput={(e) => setDomain(e.currentTarget.value)}
+              onInput={(e) => {
+                setDomainTouched(true);
+                setDomain(e.currentTarget.value);
+              }}
               placeholder="e.g. my-app.test"
             />
           </div>
@@ -112,7 +163,12 @@ export function SiteRoutingPanel() {
 
         <div class="form-row-dense">
           <div class="form-field">
-            <label for="org-select-web">Web Server</label>
+            <label for="org-select-web" class="field-label-row">
+              <span>Web Server</span>
+              <span class={`engine-status-inline ${isWebRunning() ? "is-up" : "is-down"}`}>
+                {isWebRunning() ? "Running" : "Stopped"}
+              </span>
+            </label>
             <select
               id="org-select-web"
               class="dense-select"
@@ -138,7 +194,12 @@ export function SiteRoutingPanel() {
           </div>
 
           <div class="form-field">
-            <label for="org-select-php">PHP Upstream Engine</label>
+            <label for="org-select-php" class="field-label-row">
+              <span>PHP Version</span>
+              <span class={`engine-status-inline ${isPhpRunning() ? "is-up" : "is-down"}`}>
+                {isPhpRunning() ? "Running" : "Stopped"}
+              </span>
+            </label>
             <select
               id="org-select-php"
               class="dense-select"
@@ -179,7 +240,7 @@ export function SiteRoutingPanel() {
           <button
             type="submit"
             class="dense-action-btn btn-primary-solid h-9 px-4"
-            disabled={isSaving()}
+            disabled={isSaving() || !isFormValid()}
           >
             {isSaving() ? "Applying..." : "Apply Routing to Nginx"}
           </button>
@@ -190,10 +251,22 @@ export function SiteRoutingPanel() {
       <div class="active-routes-section">
         <div class="routes-header-flex">
           <h4 class="routes-title">Active Configured Routes</h4>
-          <span class="loopback-hint text-xs">
-            Tip: <code>http://127.0.0.1:{port()}</code> works immediately without modifying{" "}
-            <code>/etc/hosts</code>
-          </span>
+          <div class="routes-header-right">
+            <Show when={state.sites.length > 4}>
+              <input
+                type="search"
+                class="dense-input font-mono"
+                style={{ width: "180px", height: "28px", "font-size": "0.74rem" }}
+                placeholder="Filter routes..."
+                aria-label="Filter configured routes"
+                value={siteFilter()}
+                onInput={(e) => setSiteFilter(e.currentTarget.value)}
+              />
+            </Show>
+            <span class="loopback-hint text-xs">
+              Loopback: <code>http://127.0.0.1:{port()}</code>
+            </span>
+          </div>
         </div>
 
         <div class="routes-table font-mono">
@@ -203,13 +276,16 @@ export function SiteRoutingPanel() {
             <span>WEB SERVER</span>
             <span>UPSTREAM</span>
             <span>LOOPBACK URL</span>
+            <span>ACTIONS</span>
           </div>
 
           <For
-            each={state.sites}
+            each={filteredSites()}
             fallback={
-              <div class="routes-empty text-xs text-slate-500 py-4 text-center">
-                No project sites routed yet. Add a route above.
+              <div class="routes-empty font-mono">
+                {state.sites.length > 0
+                  ? "No routes match the current filter."
+                  : "No project sites routed yet. Add a route above."}
               </div>
             }
           >
@@ -217,8 +293,12 @@ export function SiteRoutingPanel() {
               <div class="routes-row">
                 <span class="route-name">{site.name}</span>
                 <span class="route-domain">{site.domain}</span>
-                <span class="route-server">{site.webServerId}</span>
-                <span class="route-upstream">{site.runtimeId}</span>
+                <span class="route-server" title={site.webServerId}>
+                  {instanceLabel(site.webServerId)}
+                </span>
+                <span class="route-upstream" title={site.runtimeId}>
+                  {instanceLabel(site.runtimeId)}
+                </span>
                 <span class="route-link">
                   <a
                     href={`http://127.0.0.1:${site.port}`}
@@ -229,6 +309,26 @@ export function SiteRoutingPanel() {
                     http://127.0.0.1:{site.port} ↗
                   </a>
                 </span>
+                <span class="route-actions-cell">
+                  <button
+                    type="button"
+                    class="dense-action-btn btn-ghost-icon"
+                    title={`Edit ${site.name}`}
+                    aria-label={`Edit ${site.name}`}
+                    onClick={() => handleEditSite(site)}
+                  >
+                    <Icon name="edit" size={12} />
+                  </button>
+                  <button
+                    type="button"
+                    class="dense-action-btn btn-ghost-icon"
+                    title={`Delete ${site.name}`}
+                    aria-label={`Delete ${site.name}`}
+                    onClick={() => void deleteProjectSite(site.name)}
+                  >
+                    <Icon name="x" size={12} />
+                  </button>
+                </span>
               </div>
             )}
           </For>
@@ -237,13 +337,21 @@ export function SiteRoutingPanel() {
         {/* /etc/hosts Helper Snippet */}
         <div class="hosts-helper-card">
           <div class="hosts-helper-header">
-            <span class="font-bold text-xs">DNS Resolver Setup for Local Domain:</span>
-            <button type="button" class="copy-snippet-btn" onClick={copyHostsSnippet}>
-              {copiedSnippet() ? "✓ Copied Command" : "📋 Copy Command"}
+            <span class="font-bold text-xs">
+              Optional /etc/hosts entry (still use :{port()} if Nginx is not on port 80):
+            </span>
+            <button
+              type="button"
+              class="copy-snippet-btn"
+              disabled={!domain().trim()}
+              onClick={copyHostsSnippet}
+            >
+              <Icon name={copiedSnippet() ? "check" : "copy"} size={12} />
+              <span>{copiedSnippet() ? "Copied Command" : "Copy Command"}</span>
             </button>
           </div>
           <code class="hosts-code-snippet font-mono">
-            echo "127.0.0.1 {domain()}" | sudo tee -a /etc/hosts
+            echo "127.0.0.1 {domain().trim() || "my-app.test"}" | sudo tee -a /etc/hosts
           </code>
         </div>
       </div>

@@ -1,0 +1,16 @@
+[engine]
+name = "node"
+category = "runtime"
+version = "{{version}}"
+
+[binaries]
+daemon = "bin/node"
+client = "bin/npm"
+
+[lifecycle]
+start_args = ["--version"]
+
+[lifecycle.ready_check]
+kind = "tcp"
+timeout_secs = 5
+

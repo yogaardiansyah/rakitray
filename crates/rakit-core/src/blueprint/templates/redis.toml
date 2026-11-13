@@ -1,0 +1,26 @@
+[engine]
+name = "redis"
+category = "cache"
+version = "{{version}}"
+default_port = 6379
+
+[binaries]
+daemon = "bin/redis-server"
+client = "bin/redis-cli"
+
+[lifecycle]
+start_args = [
+  "{{config_file}}",
+  "--port",
+  "{{port}}",
+  "--bind",
+  "{{bind_address}}",
+  "--dir",
+  "{{data_dir}}",
+]
+ready_check = { kind = "tcp", timeout_secs = 10 }
+
+[config]
+template = "conf/redis.conf.tpl"
+output = "config/redis/{{instance_id}}.conf"
+

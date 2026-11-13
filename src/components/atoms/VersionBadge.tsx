@@ -1,3 +1,5 @@
+import { Show } from "solid-js";
+
 interface VersionBadgeProps {
   version: string;
   profile?: string;
@@ -6,9 +8,9 @@ interface VersionBadgeProps {
 
 export function VersionBadge(props: VersionBadgeProps) {
   return (
-    <span class="version-badge font-mono">
-      {props.engine ? `${props.engine} ` : ""}v{props.version}
-      {props.profile ? ` [${props.profile}]` : ""}
+    <span class="version-badge-group font-mono">
+      <span class="version-number">{props.version}</span>
+      <Show when={props.profile}>{(p) => <span class="version-profile-tag">{p()}</span>}</Show>
     </span>
   );
 }

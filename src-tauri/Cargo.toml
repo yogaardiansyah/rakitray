@@ -15,8 +15,10 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+rakit-core = { path = "../crates/rakit-core" }
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-opener = "2"
+tauri-plugin-mcp = { git = "https://github.com/P3GLEG/tauri-plugin-mcp", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
@@ -34,10 +36,6 @@ zip = { version = "2.2", default-features = false, features = ["deflate"] }
 lzma-rs = "0.3"
 
 [[bin]]
-name = "rakit"
-path = "src/bin/rakit.rs"
-
-[[bin]]
 name = "rakitray"
 path = "src/main.rs"
 
@@ -50,4 +48,5 @@ windows = { version = "0.58", features = ["Win32_System_JobObjects", "Win32_Foun
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+mcp = ["dep:tauri-plugin-mcp"]
 

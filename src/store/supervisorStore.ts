@@ -19,6 +19,7 @@ export interface SupervisorState {
   logFilter: string;
   isScanning: boolean;
   isSubscribed: boolean;
+  lastError: string | null;
 }
 
 const MAX_LOGS = 500;
@@ -32,6 +33,7 @@ const [state, setState] = createStore<SupervisorState>({
   logFilter: "all",
   isScanning: false,
   isSubscribed: false,
+  lastError: null,
 });
 
 export function useSupervisor() {
@@ -79,23 +81,29 @@ export function useSupervisor() {
   }
 
   async function startService(instanceId: string) {
+    setState("lastError", null);
     try {
       const updated = await invoke<ServiceInstance>("start_instance", {
         instanceId,
       });
       setState("instances", (inst) => inst.instanceId === instanceId, updated);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setState("lastError", `Start ${instanceId} failed: ${msg}`);
       console.error(`Failed to start service ${instanceId}:`, err);
     }
   }
 
   async function stopService(instanceId: string) {
+    setState("lastError", null);
     try {
       const updated = await invoke<ServiceInstance>("stop_instance", {
         instanceId,
       });
       setState("instances", (inst) => inst.instanceId === instanceId, updated);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setState("lastError", `Stop ${instanceId} failed: ${msg}`);
       console.error(`Failed to stop service ${instanceId}:`, err);
     }
   }
@@ -135,8 +143,52 @@ export function useSupervisor() {
     }
   }
 
+  async function deleteProjectSite(name: string): Promise<boolean> {
+    try {
+      await invoke("delete_project_site", { name });
+      setState(
+        "sites",
+        produce((draft) => {
+          const idx = draft.findIndex((s) => s.name === name);
+          if (idx >= 0) draft.splice(idx, 1);
+        }),
+      );
+      appendLocalLog("router", "system", `Removed route '${name}'`);
+      return true;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      appendLocalLog("router", "stderr", `Failed to remove route '${name}': ${msg}`);
+      return false;
+    }
+  }
+
+  function appendLocalLog(
+    instanceId: string,
+    stream: "stdout" | "stderr" | "system",
+    line: string,
+  ) {
+    setState(
+      "logs",
+      produce((draft) => {
+        draft.push({
+          instanceId,
+          timestampMs: Date.now(),
+          stream,
+          line,
+        });
+        if (draft.length > MAX_LOGS) {
+          draft.splice(0, draft.length - MAX_LOGS);
+        }
+      }),
+    );
+  }
+
   function clearLogs() {
     setState("logs", []);
+  }
+
+  function clearError() {
+    setState("lastError", null);
   }
 
   function setActiveTab(tab: ActiveTab) {
@@ -156,7 +208,10 @@ export function useSupervisor() {
     startAllServices,
     stopAllServices,
     saveProjectSite,
+    deleteProjectSite,
+    appendLocalLog,
     clearLogs,
+    clearError,
     setActiveTab,
     setLogFilter,
   };

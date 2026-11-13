@@ -1,0 +1,14 @@
+schema_version = 1
+name = "php-node-starter"
+
+[services.php]
+version = "8.3.9"
+port = 9000
+
+[services.php.config]
+memory_limit = "512M"
+upload_max_filesize = "64M"
+
+[services.node]
+version = "22.11.0"
+

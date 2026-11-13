@@ -1,11 +1,53 @@
-import { For, Show, onMount } from "solid-js";
+import { For, Show, createMemo, createSignal, onMount } from "solid-js";
+import {
+  type EngineGroup,
+  computeDownloadPercent,
+  filterCatalogItems,
+  formatTransferRate,
+  groupCatalogByEngine,
+} from "../../lib/storeHelpers";
 import { useRakiStore } from "../../store/storeState";
 import { useSupervisor } from "../../store/supervisorStore";
+import { Icon } from "../atoms";
+
+const ENGINE_LABELS: Record<string, string> = {
+  mariadb: "MariaDB",
+  php: "PHP",
+  nginx: "Nginx",
+  caddy: "Caddy",
+  redis: "Redis",
+  mailpit: "Mailpit",
+};
+
+function formatEngineName(engine: string): string {
+  return ENGINE_LABELS[engine.toLowerCase()] ?? engine;
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  web_server: "Web Server",
+  runtime: "Runtime",
+  database: "Database",
+  cache: "Cache",
+  tool: "Tool",
+};
+
+function formatCategoryLabel(category: string): string {
+  return CATEGORY_LABELS[category] ?? category;
+}
 
 export function RakiStorePanel() {
-  const { storeState, fetchCatalog, installRuntime, uninstallRuntime, setCategory } =
-    useRakiStore();
+  const {
+    storeState,
+    fetchCatalog,
+    installRuntime,
+    cancelInstall,
+    installStack,
+    uninstallRuntime,
+    setCategory,
+  } = useRakiStore();
   const { scanRuntimes } = useSupervisor();
+  const [searchQuery, setSearchQuery] = createSignal("");
+  const [selectedByEngine, setSelectedByEngine] = createSignal<Record<string, string>>({});
 
   onMount(() => {
     fetchCatalog();
@@ -20,10 +62,31 @@ export function RakiStorePanel() {
     { id: "tool", label: "Tools" },
   ];
 
-  const filteredItems = () => {
-    if (storeState.selectedCategory === "all") return storeState.catalog;
-    return storeState.catalog.filter((i) => i.entry.category === storeState.selectedCategory);
+  const filteredItems = createMemo(() =>
+    filterCatalogItems(storeState.catalog, storeState.selectedCategory, searchQuery()),
+  );
+  const groupedEngines = createMemo(() => groupCatalogByEngine(filteredItems()));
+
+  const getSelectedItem = (group: EngineGroup) => {
+    const pickedId = selectedByEngine()[group.engine];
+    if (pickedId) {
+      const found = group.versions.find((v) => v.entry.id === pickedId);
+      if (found) return found;
+    }
+    return group.versions.find((v) => v.installed) ?? group.versions[0];
   };
+
+  const installedCount = createMemo(() => storeState.catalog.filter((i) => i.installed).length);
+  const hasActiveInstall = createMemo(() =>
+    Object.values(storeState.activeProgress).some(
+      (p) =>
+        p.state === "queued" ||
+        p.state === "downloading" ||
+        p.state === "verifying_sha256" ||
+        p.state === "extracting_lean" ||
+        p.state === "registering",
+    ),
+  );
 
   const handleInstall = async (catalogId: string) => {
     await installRuntime(catalogId, async () => {
@@ -32,121 +95,209 @@ export function RakiStorePanel() {
   };
 
   return (
-    <div class="rakistore-panel p-6 max-w-6xl mx-auto">
-      {/* Header */}
-      <div class="flex items-center justify-between mb-6">
+    <div class="store-panel">
+      <div class="store-header">
         <div>
-          <h2 class="text-xl font-bold text-slate-100">RakiStore Runtime Store</h2>
-          <p class="text-xs text-slate-400 mt-1">
-            Install and manage pre-compiled engine binaries with zero-bloat lean extraction.
-          </p>
+          <h2 class="store-title">RakiStore Catalog</h2>
+          <p class="store-subtitle">Download and manage local server and runtime binaries.</p>
         </div>
-        <button
-          type="button"
-          class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded border border-slate-700 transition"
-          onClick={() => fetchCatalog(true)}
+
+        <div class="store-header-actions">
+          <div class="store-stats-pill font-mono">
+            <span>INSTALLED:</span>
+            <strong>
+              {installedCount()}/{storeState.catalog.length}
+            </strong>
+          </div>
+          <button
+            type="button"
+            class="store-refresh-btn"
+            disabled={storeState.isLoading}
+            onClick={() => fetchCatalog(true)}
+          >
+            <Icon name="refresh" size={13} />
+            <span>{storeState.isLoading ? "Syncing..." : "Refresh Catalog"}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="store-toolbar">
+        <div class="store-category-tabs">
+          <For each={categories}>
+            {(cat) => (
+              <button
+                type="button"
+                class={`store-category-pill ${storeState.selectedCategory === cat.id ? "active" : ""}`}
+                onClick={() => setCategory(cat.id)}
+              >
+                {cat.label}
+              </button>
+            )}
+          </For>
+        </div>
+
+        <input
+          type="search"
+          class="store-search-input font-mono"
+          placeholder="Filter engine or version..."
+          aria-label="Filter RakiStore packages"
+          value={searchQuery()}
+          onInput={(e) => setSearchQuery(e.currentTarget.value)}
+        />
+      </div>
+
+      <Show when={storeState.error}>
+        {(err) => <div class="store-error-banner font-mono">{err()}</div>}
+      </Show>
+
+      <Show when={storeState.stackTemplates.length > 0}>
+        <div class="store-stacks-strip">
+          <span class="store-stacks-label font-mono">1-CLICK STACKS</span>
+          <div class="store-stacks-list">
+            <For each={storeState.stackTemplates}>
+              {(tpl) => (
+                <button
+                  type="button"
+                  class="store-stack-pill"
+                  disabled={hasActiveInstall() || storeState.isLoading}
+                  onClick={() => installStack(tpl.id, () => void scanRuntimes())}
+                  title={tpl.description}
+                >
+                  <span>{tpl.name}</span>
+                  <span class="store-stack-count font-mono">{tpl.members.length} pkgs</span>
+                </button>
+              )}
+            </For>
+          </div>
+        </div>
+      </Show>
+
+      <div class="store-list">
+        <div class="store-list-header font-mono">
+          <span>ENGINE</span>
+          <span>VERSION</span>
+          <span>SIZE</span>
+          <span>STATUS</span>
+          <span class="col-actions">ACTION</span>
+        </div>
+
+        <For
+          each={groupedEngines()}
+          fallback={
+            <div class="store-empty-state font-mono">
+              No packages match the selected category or filter.
+            </div>
+          }
         >
-          Refresh Catalog
-        </button>
-      </div>
-
-      {/* Category Pills */}
-      <div class="flex gap-2 mb-6 border-b border-slate-800 pb-3">
-        <For each={categories}>
-          {(cat) => (
-            <button
-              type="button"
-              class={`px-3 py-1 text-xs rounded-full transition ${
-                storeState.selectedCategory === cat.id
-                  ? "bg-indigo-600 text-white font-medium"
-                  : "bg-slate-800/60 text-slate-400 hover:bg-slate-800"
-              }`}
-              onClick={() => setCategory(cat.id)}
-            >
-              {cat.label}
-            </button>
-          )}
-        </For>
-      </div>
-
-      {/* Catalog Grid */}
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <For each={filteredItems()}>
-          {(item) => {
-            const progress = () => storeState.activeProgress[item.entry.id];
-            const isInstalled = () => item.installed;
+          {(group) => {
+            const selected = () => getSelectedItem(group);
+            const progress = () => storeState.activeProgress[selected().entry.id];
+            const isInstalled = () => selected().installed;
 
             return (
-              <div class="package-card bg-slate-900 border border-slate-800 rounded-lg p-4 flex flex-col justify-between">
-                <div>
-                  <div class="flex items-start justify-between">
-                    <div>
-                      <h4 class="text-sm font-semibold text-slate-100">{item.entry.engine}</h4>
-                      <span class="text-xs text-slate-400">{item.entry.version}</span>
-                    </div>
-                    <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">
-                      ~{item.entry.estimatedSizeMb} MB
-                    </span>
-                  </div>
+              <div class={`store-list-row ${isInstalled() ? "is-installed" : ""}`}>
+                <div class="store-row-engine">
+                  <span class="store-engine-name">{formatEngineName(group.engine)}</span>
+                  <span class="store-cat-badge">{formatCategoryLabel(group.category)}</span>
+                </div>
 
-                  {/* Progress Indicator */}
-                  <Show when={progress()}>
+                <div class="store-row-version">
+                  <select
+                    class="store-version-select font-mono"
+                    aria-label={`${formatEngineName(group.engine)} version`}
+                    value={selected().entry.id}
+                    onChange={(e) => {
+                      const nextId = e.currentTarget.value;
+                      setSelectedByEngine((prev) => ({ ...prev, [group.engine]: nextId }));
+                    }}
+                  >
+                    <For each={group.versions}>
+                      {(ver) => (
+                        <option value={ver.entry.id}>
+                          v{ver.entry.version}
+                          {ver.installed ? " (Installed)" : ""}
+                        </option>
+                      )}
+                    </For>
+                  </select>
+                </div>
+
+                <div class="store-row-size font-mono">~{selected().entry.estimatedSizeMb} MB</div>
+
+                <div class="store-row-status">
+                  <Show
+                    when={progress()}
+                    fallback={
+                      <span
+                        class={`store-status-tag ${isInstalled() ? "is-installed" : "is-available"}`}
+                      >
+                        <span class="store-status-dot" aria-hidden="true" />
+                        {isInstalled() ? "Installed" : "Available"}
+                      </span>
+                    }
+                  >
                     {(p) => (
-                      <div class="mt-3 p-2 bg-slate-950 rounded border border-slate-800 text-xs">
-                        <div class="flex justify-between text-[11px] text-slate-400 mb-1">
-                          <span class="capitalize">{p().state.replace("_", " ")}</span>
-                          <span>
-                            {p().speedBps > 0 ? `${Math.round(p().speedBps / 1024)} KB/s` : ""}
-                          </span>
+                      <div class="store-inline-progress">
+                        <div class="store-progress-meta font-mono">
+                          <span class="store-progress-state">{p().state.replace(/_/g, " ")}</span>
+                          <span>{formatTransferRate(p().speedBps)}</span>
                         </div>
-                        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div class="store-progress-bar">
                           <div
-                            class="bg-indigo-500 h-full transition-all duration-150"
+                            class="store-progress-fill"
                             style={{
-                              width: `${
-                                p().totalBytes > 0
-                                  ? Math.min(
-                                      100,
-                                      Math.round((p().bytesDownloaded / p().totalBytes) * 100),
-                                    )
-                                  : 0
-                              }%`,
+                              width: `${computeDownloadPercent(p().bytesDownloaded, p().totalBytes)}%`,
                             }}
                           />
                         </div>
-                        <Show when={p().message}>
-                          <span class="text-[10px] text-emerald-400 mt-1 block truncate">
-                            {p().message}
-                          </span>
+                        <Show when={p().error?.detail ?? p().message}>
+                          {(msg) => (
+                            <span class="store-progress-msg font-mono" title={msg()}>
+                              {msg()}
+                            </span>
+                          )}
                         </Show>
                       </div>
                     )}
                   </Show>
                 </div>
 
-                <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
-                  <span
-                    class={`text-[11px] font-medium ${isInstalled() ? "text-emerald-400" : "text-slate-500"}`}
-                  >
-                    {isInstalled() ? "✓ Installed" : "Available"}
-                  </span>
-
+                <div class="store-row-action">
                   <Show
                     when={isInstalled()}
                     fallback={
-                      <button
-                        type="button"
-                        class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded transition"
-                        onClick={() => handleInstall(item.entry.id)}
+                      <Show
+                        when={
+                          progress()?.state === "queued" ||
+                          progress()?.state === "downloading" ||
+                          progress()?.state === "verifying_sha256" ||
+                          progress()?.state === "extracting_lean"
+                        }
+                        fallback={
+                          <button
+                            type="button"
+                            class="store-btn-install"
+                            disabled={hasActiveInstall()}
+                            onClick={() => handleInstall(selected().entry.id)}
+                          >
+                            Install
+                          </button>
+                        }
                       >
-                        Install
-                      </button>
+                        <button
+                          type="button"
+                          class="store-btn-cancel"
+                          onClick={() => cancelInstall(selected().entry.id)}
+                        >
+                          Cancel
+                        </button>
+                      </Show>
                     }
                   >
                     <button
                       type="button"
-                      class="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs rounded transition border border-rose-500/20"
-                      onClick={() => uninstallRuntime(item.entry.id)}
+                      class="store-btn-uninstall"
+                      onClick={() => uninstallRuntime(selected().entry.id)}
                     >
                       Uninstall
                     </button>

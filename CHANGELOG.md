@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [Unreleased] (v0.3.0 Stabilization)
+
+### Added
+- **Dynamic Runtime Resolvers (`crates/rakit-core/src/store/resolver.rs`):** Official prebuilt runtime resolution without hardcoded catalog versions for **Node.js** (`nodejs.org/dist/index.json` + `SHASUMS256.txt`), **PHP** (`dl.static-php.dev`), **Go** (`go.dev/dl/?mode=json` + SHA-256), **Java/JDK** (Eclipse Adoptium API + SHA-256), and **Python** (`astral-sh/python-build-standalone`).
+- **Shareable `.rakitray.toml` Stack (`ProjectManifest` & `ServiceSpec`):** Per-service `version`, `port` conflict check, `env`, and engine-aware `config` rendering (`render_service_config` for `php.ini`, `my.cnf`, `redis.conf`, `nginx.conf`, `caddy`).
+- **Session-Scoped Isolation (`rakit env`):** Prints `export PATH="..."` for active project runtimes so closing the shell restores the user's system defaults.
+- **Full Uninstall (`rakit remove` / `rakit uninstall`):** Deletes runtime directories under `runtime/` and cleans up install receipts (supports exact and minor-prefix matches).
+- **CLI Guide & Live E2E Test:** `docs/CLI_GUIDE.md` and `scripts/e2e_live_test.sh`.
+
+### Changed
+- **Parameterized Blueprints:** Replaced hardcoded `version` fields in `crates/rakit-core/src/blueprint/templates/*.toml` with `{{version}}` and added `node.toml`, `go.toml`, `python.toml`, `java.toml`.
+- **Optional MCP Plugin:** Made `tauri-plugin-mcp` optional behind the `mcp` Cargo feature in `src-tauri/Cargo.toml` so Linux builds and tests do not require `libgbm-dev`.
 
 ### Added
 - Initial open-source repository governance, legal attribution protections (`LICENSE` + `NOTICE` enforcing `AGPL-3.0-only` Section 7(b) and Section 5(d)), and contributor documentation.

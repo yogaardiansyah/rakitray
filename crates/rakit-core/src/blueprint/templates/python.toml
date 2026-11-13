@@ -1,0 +1,16 @@
+[engine]
+name = "python"
+category = "runtime"
+version = "{{version}}"
+
+[binaries]
+daemon = "bin/python3"
+client = "bin/pip3"
+
+[lifecycle]
+start_args = ["--version"]
+
+[lifecycle.ready_check]
+kind = "tcp"
+timeout_secs = 5
+

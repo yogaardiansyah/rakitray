@@ -1,7 +1,7 @@
 import { Show } from "solid-js";
 import { useSupervisor } from "../../store/supervisorStore";
 import type { ServiceInstance } from "../../types/ipc";
-import { StatusLed, VersionBadge } from "../atoms";
+import { Icon, StatusLed, VersionBadge } from "../atoms";
 
 interface ServiceRowProps {
   instance: ServiceInstance;
@@ -71,31 +71,23 @@ export function ServiceRow(props: ServiceRowProps) {
       {/* Col 3: Status */}
       <div class="col-status">
         <span
-          class={`dense-status-pill font-mono ${getStatusClass()}`}
+          class={`dense-status-pill ${getStatusClass()}`}
           title={props.instance.lastError ?? props.instance.status}
         >
-          {props.instance.status.toUpperCase()}
+          {props.instance.status.charAt(0).toUpperCase() + props.instance.status.slice(1)}
         </span>
       </div>
 
       {/* Col 4: PID / Port */}
       <div class="col-network font-mono">
-        <span class="network-tag">
-          <span class="dim">PID:</span> {props.instance.pid ?? "—"}
-        </span>
-        <span class="network-tag">
-          <span class="dim">PORT:</span> {props.instance.port ?? "—"}
-        </span>
+        <span class="network-tag">{props.instance.port ?? "—"}</span>
+        <span class="network-tag dim">PID {props.instance.pid ?? "—"}</span>
       </div>
 
       {/* Col 5: CPU / MEM */}
       <div class="col-resources font-mono">
-        <span class="resource-tag">
-          <span class="dim">CPU:</span> {props.instance.cpuPercent.toFixed(1)}%
-        </span>
-        <span class="resource-tag">
-          <span class="dim">RAM:</span> {formatMemory(props.instance.memoryBytes)}
-        </span>
+        <span class="resource-tag">{props.instance.cpuPercent.toFixed(1)}%</span>
+        <span class="resource-tag dim">{formatMemory(props.instance.memoryBytes)}</span>
       </div>
 
       {/* Col 6: Actions */}
@@ -105,8 +97,9 @@ export function ServiceRow(props: ServiceRowProps) {
           class="dense-action-btn btn-ghost-icon"
           onClick={() => setLogFilter(props.instance.instanceId)}
           title={`Filter logs for ${props.instance.displayName}`}
+          aria-label={`Filter logs for ${props.instance.displayName}`}
         >
-          📄
+          <Icon name="terminal" size={13} />
         </button>
 
         <Show

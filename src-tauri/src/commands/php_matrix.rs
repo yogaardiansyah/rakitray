@@ -359,7 +359,9 @@ pub(crate) async fn subscribe_php_matrix(
     on_event: Channel<PhpMatrixEvent>,
     state: State<'_, SupervisorState>,
 ) -> Result<(), RakitrayError> {
-    state.add_matrix_subscriber(on_event).await;
+    state
+        .add_matrix_subscriber(crate::commands::bridge_channel(on_event))
+        .await;
     Ok(())
 }
 

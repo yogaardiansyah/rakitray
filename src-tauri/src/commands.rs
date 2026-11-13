@@ -12,12 +12,26 @@ use tauri::State;
 
 pub type SupervisorState = Arc<Supervisor>;
 
+pub(crate) fn bridge_channel<T: serde::Serialize + Send + 'static>(
+    channel: Channel<T>,
+) -> tokio::sync::mpsc::UnboundedSender<T> {
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+    tauri::async_runtime::spawn(async move {
+        while let Some(msg) = rx.recv().await {
+            if channel.send(msg).is_err() {
+                break;
+            }
+        }
+    });
+    tx
+}
+
 #[tauri::command]
 pub(crate) async fn subscribe_supervisor(
     on_event: Channel<IpcStreamEvent>,
     state: State<'_, SupervisorState>,
 ) -> Result<(), String> {
-    state.add_subscriber(on_event).await;
+    state.add_subscriber(bridge_channel(on_event)).await;
     Ok(())
 }
 
@@ -56,6 +70,15 @@ pub(crate) async fn save_project_site(
     state: State<'_, SupervisorState>,
 ) -> Result<(), String> {
     state.save_project_site(site).await;
+    Ok(())
+}
+
+#[tauri::command]
+pub(crate) async fn delete_project_site(
+    name: String,
+    state: State<'_, SupervisorState>,
+) -> Result<(), String> {
+    state.delete_project_site(&name).await;
     Ok(())
 }
 

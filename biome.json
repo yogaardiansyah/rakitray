@@ -12,6 +12,8 @@
       "dist/**",
       "dist-ssr/**",
       "src-tauri/**",
+      "crates/**",
+      "target/**",
       "bin/**",
       "data/**",
       "logs/**",

@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/rakit-core",
+    "crates/rakit-cli",
+    "src-tauri",
+]
+
+[profile.dev]
+debug = 0
+

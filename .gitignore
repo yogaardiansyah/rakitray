@@ -10,6 +10,7 @@ dist-ssr/
 .vite/
 
 # Tauri & Rust compilation artifacts
+/target/
 src-tauri/target/
 src-tauri/gen/schemas/
 src-tauri/WixTools/
@@ -57,4 +58,7 @@ Desktop.ini
 # AI agent local customizations & skills
 .agents/
 .skills
+
+# Local human/blackbox testing matrices & screenshots
+.testing/
 

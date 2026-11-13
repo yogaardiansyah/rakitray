@@ -1,0 +1,16 @@
+[package]
+name = "rakit-cli"
+version = "0.2.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+
+[[bin]]
+name = "rakit"
+path = "src/main.rs"
+
+[dependencies]
+rakit-core = { path = "../rakit-core" }
+clap = { version = "4", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+serde_json = "1"
+
